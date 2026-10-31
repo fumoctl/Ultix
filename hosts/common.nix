@@ -595,7 +595,6 @@
     python3
     google-antigravity
     google-antigravity-cli
-    unstable.google-chrome
 
     # File Management & Media Openers
     xarchiver

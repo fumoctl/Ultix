@@ -128,20 +128,31 @@
 
   # Antigravity MCP Config
   home.file.".gemini/config/mcp_config.json".source =
-  (pkgs.formats.json { }).generate "antigravity-mcp.json" {
-    mcpServers = {
-      dbcode = {
-        command = "${pkgs.bash}/bin/bash";
-        args = [
-          "-c"
-          ''exec ${pkgs.nodejs}/bin/node "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
-        ];
+    (pkgs.formats.json { }).generate "antigravity-mcp.json"
+      {
+        mcpServers = {
+          context7 = {
+            command = "${pkgs.unstable.context7-mcp}/bin/context7-mcp";
+          };
+          dbcode = {
+            command = "${pkgs.bash}/bin/bash";
+            args = [
+              "-c"
+              ''exec ${pkgs.nodejs}/bin/node "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
+            ];
+          };
+          playwright = {
+            command = "${pkgs.unstable.playwright-mcp}/bin/playwright-mcp";
+            args = [
+              "--browser"
+              "chromium"
+            ];
+          };
+          rivalsearch = {
+            serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
+          };
+        };
       };
-      rivalsearch = {
-        serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
-      };
-    };
-  };
 
   # Brave Browser with privacy and utility extensions
   programs.brave = {
