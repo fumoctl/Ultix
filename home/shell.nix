@@ -187,7 +187,7 @@
 
   home.activation = {
     configureFlatpakLanguages = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${pkgs.flatpak}/bin/flatpak config --user --set languages "en;ja"
+      ${pkgs.flatpak}/bin/flatpak config --user --set languages "en;ja;es"
     '';
 
     fixobsqt = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

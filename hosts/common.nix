@@ -126,7 +126,7 @@
     files = [
       "/etc/machine-id"
       "/etc/ly/save.txt"
-      ];
+    ];
     users.fumoctl = {
       directories = [
         "Desktop"
@@ -183,8 +183,14 @@
         ".cargo"
         ".rustup"
 
-        { directory = ".gnupg"; mode = "0700"; }
-        { directory = ".ssh"; mode = "0700"; }
+        {
+          directory = ".gnupg";
+          mode = "0700";
+        }
+        {
+          directory = ".ssh";
+          mode = "0700";
+        }
       ];
       files = [
         ".config/zsh/.zsh_history"
@@ -234,7 +240,11 @@
 
   i18n = {
     defaultLocale = lib.mkDefault "en_US.UTF-8";
-    extraLocales = [ "ja_JP.UTF-8/UTF-8" ];
+    extraLocales = [
+      "ja_JP.UTF-8/UTF-8"
+      "es_AR.UTF-8/UTF-8"
+      "es_ES.UTF-8/UTF-8"
+    ];
   };
 
   services.xserver.xkb = {
@@ -251,6 +261,9 @@
       nerd-fonts.ubuntu
       nerd-fonts.hack
       nerd-fonts.fira-code
+      nerd-fonts.inconsolata
+      inconsolata
+      inconsolata-lgc
       noto-fonts
       noto-fonts-cjk-sans
       noto-fonts-cjk-serif
@@ -281,7 +294,7 @@
   programs.hyprland = {
     enable = true;
     xwayland.enable = true;
-    withUWSM  = true;
+    withUWSM = true;
   };
 
   programs.noctalia = {
@@ -314,7 +327,10 @@
       # or org.freedesktop.portal.Settings disappears from the portal broker
       # and libadwaita apps (Ptyxis etc.) always see light mode.
       hyprland = {
-        default = [ "hyprland" "gtk" ];
+        default = [
+          "hyprland"
+          "gtk"
+        ];
       };
     };
   };
@@ -330,6 +346,7 @@
     GDK_BACKEND = "wayland,x11,*";
     SDL_VIDEODRIVER = "wayland";
     CLUTTER_BACKEND = "wayland";
+    DICPATH = "/run/current-system/sw/share/hunspell";
   };
 
   services.displayManager = {
@@ -337,7 +354,7 @@
       enable = true;
     };
     defaultSession = "hyprland-uwsm";
-  }; 
+  };
 
   # --- Hardware & Input Integrations ---
   networking = {
@@ -368,7 +385,11 @@
     firewall = {
       enable = true;
       checkReversePath = "loose";
-      trustedInterfaces = [ "tun0" "tun2" "amn0" ];
+      trustedInterfaces = [
+        "tun0"
+        "tun2"
+        "amn0"
+      ];
     };
   };
 
@@ -424,7 +445,7 @@
     enable = true;
     enable32Bit = true;
     extraPackages = [
-      
+
     ];
   };
   services.xserver.enable = true;
@@ -646,6 +667,9 @@
     # Productivity & Daily Applications
     unstable.equibop
     thunderbird
+    hunspell
+    hunspellDicts.en_US
+    hunspellDicts.es_AR
     unstable.onlyoffice-desktopeditors
     unstable.mullvad-browser
     mpv
@@ -669,7 +693,7 @@
   programs.zsh.enable = true;
 
   users.mutableUsers = false;
-  users.groups.fumoctl = {};
+  users.groups.fumoctl = { };
   users.users.fumoctl = {
     isNormalUser = true;
     hashedPasswordFile = "/persist/passwords/fumoctl";
