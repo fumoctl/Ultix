@@ -308,19 +308,21 @@
       "audio/aac" = "org.gnome.Lollypop.desktop";
       "audio/x-wav" = "org.gnome.Lollypop.desktop";
 
-      # Compressed Archives
-      "application/zip" = "xarchiver.desktop";
-      "application/x-tar" = "xarchiver.desktop";
-      "application/x-compressed-tar" = "xarchiver.desktop";
-      "application/x-bzip-compressed-tar" = "xarchiver.desktop";
-      "application/x-xz-compressed-tar" = "xarchiver.desktop";
-      "application/x-zstd-compressed-tar" = "xarchiver.desktop";
-      "application/x-7z-compressed" = "xarchiver.desktop";
-      "application/vnd.rar" = "xarchiver.desktop";
-      "application/x-rar" = "xarchiver.desktop";
-      "application/gzip" = "xarchiver.desktop";
-      "application/x-bzip2" = "xarchiver.desktop";
-      "application/x-xz" = "xarchiver.desktop";
+      # Compressed Archives (Ark)
+      "application/zip" = "org.kde.ark.desktop";
+      "application/x-tar" = "org.kde.ark.desktop";
+      "application/x-compressed-tar" = "org.kde.ark.desktop";
+      "application/x-bzip-compressed-tar" = "org.kde.ark.desktop";
+      "application/x-bzip2-compressed-tar" = "org.kde.ark.desktop";
+      "application/x-xz-compressed-tar" = "org.kde.ark.desktop";
+      "application/x-zstd-compressed-tar" = "org.kde.ark.desktop";
+      "application/x-7z-compressed" = "org.kde.ark.desktop";
+      "application/vnd.rar" = "org.kde.ark.desktop";
+      "application/x-rar" = "org.kde.ark.desktop";
+      "application/gzip" = "org.kde.ark.desktop";
+      "application/x-bzip2" = "org.kde.ark.desktop";
+      "application/x-xz" = "org.kde.ark.desktop";
+      "application/zstd" = "org.kde.ark.desktop";
 
       # Documents & PDF (Okular)
       "application/pdf" = "org.kde.okular.desktop";

@@ -618,7 +618,6 @@
     google-antigravity-cli
 
     # File Management & Media Openers
-    xarchiver
     icoextract
     kdePackages.gwenview
     lollypop

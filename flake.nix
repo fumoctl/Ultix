@@ -1,5 +1,5 @@
 {
-  description = "Ultix: Modular host-separated NixOS 26.05 configuration with Hyprland, Noctalia, and Impermanence";
+  description = "Ultix: Modular host-separated NixOS Stable configuration with Hyprland, Noctalia, and Impermanence";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
