@@ -135,6 +135,13 @@ hl.layer_rule({
   blur = true,
 })
 
+-- Window rules
+hl.window_rule({
+  name = "float-kde-portal-dialogs",
+  match = { class = "^org\\.freedesktop\\.impl\\.portal\\.desktop\\.kde$" },
+  float = true,
+})
+
 -- Keybindings: Terminal & window operations
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))

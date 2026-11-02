@@ -59,6 +59,7 @@
     {
       QT_PLUGIN_PATH = lib.mkForce (mkQtPaths "qtPluginPrefix");
       QML2_IMPORT_PATH = lib.mkForce (mkQtPaths "qtQmlPrefix");
+      NIX_XDG_DESKTOP_PORTAL_DIR = "/run/current-system/sw/share/xdg-desktop-portal/portals";
     };
 
   home.sessionVariables = {
@@ -114,6 +115,11 @@
 
   wayland.windowManager.hyprland = {
     enable = true;
+    # Portals are managed system-wide in hosts/common.nix (`xdg.portal`).
+    # Leaving HM's default portalPackage enabled activates HM's `xdg.portal`
+    # with only hyprland.portal and overrides NIX_XDG_DESKTOP_PORTAL_DIR in
+    # 10-home-manager.conf, hiding system-wide gtk.portal and kde.portal.
+    portalPackage = null;
     configType = "lua";
     extraConfig = builtins.readFile ./hyprland.lua;
   };

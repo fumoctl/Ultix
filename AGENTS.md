@@ -280,13 +280,13 @@ Declared in `environment.persistence."/persist"` (`hideMounts = true`, `allowTra
 xdg.portal = {
   enable = true;
   wlr.enable = false;
-  extraPortals = [ pkgs.xdg-desktop-portal-hyprland pkgs.xdg-desktop-portal-gtk ];
-  config.common.default = [ "gtk" ];
-  config.hyprland.default = [ "hyprland" "gtk" ];   # NOT just ["hyprland"]
+  extraPortals = [ pkgs.xdg-desktop-portal-hyprland pkgs.xdg-desktop-portal-gtk pkgs.kdePackages.xdg-desktop-portal-kde ];
+  config.common = { default = [ "gtk" ]; "org.freedesktop.impl.portal.FileChooser" = [ "kde" ]; "org.freedesktop.impl.portal.AppChooser" = [ "kde" ]; };
+  config.hyprland = { default = [ "hyprland" "gtk" ]; "org.freedesktop.impl.portal.FileChooser" = [ "kde" ]; "org.freedesktop.impl.portal.AppChooser" = [ "kde" ]; }; # NOT just ["hyprland"]
 };
 ```
 
-The `hyprland` section overrides `common` for **all** interfaces when `XDG_CURRENT_DESKTOP=Hyprland`. The Hyprland portal only implements Screenshot/ScreenCast/GlobalShortcuts, so `gtk` must stay in the list, or `org.freedesktop.portal.Settings` disappears and libadwaita apps (Ptyxis) always render in light mode. This comment exists in `common.nix` — preserve it.
+The `hyprland` section overrides `common` for **all** interfaces when `XDG_CURRENT_DESKTOP=Hyprland`. The Hyprland portal only implements Screenshot/ScreenCast/GlobalShortcuts, so `gtk` must stay in the list, or `org.freedesktop.portal.Settings` disappears and libadwaita apps (Ptyxis) always render in light mode. This comment exists in `common.nix` — preserve it. `FileChooser` and `AppChooser` are routed to `kde` (`xdg-desktop-portal-kde`) for the Dolphin-backed file picker, and `wayland.windowManager.hyprland.portalPackage = null` in `home/noctalia.nix` prevents Home Manager from overriding `NIX_XDG_DESKTOP_PORTAL_DIR`.
 
 Session env vars (`environment.sessionVariables`): `NIXOS_OZONE_WL=1`, `MOZ_ENABLE_WAYLAND=1`, `XDG_CURRENT_DESKTOP/SESSION_DESKTOP=Hyprland`, `XDG_SESSION_TYPE=wayland`, `QT_QPA_PLATFORM="wayland;xcb"`, `QT_WAYLAND_DISABLE_WINDOWDECORATION=1`, `GDK_BACKEND="wayland,x11,*"`, `SDL_VIDEODRIVER=wayland`, `CLUTTER_BACKEND=wayland`.
 

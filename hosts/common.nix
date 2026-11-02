@@ -242,6 +242,14 @@ in
           file = ".local/state/dolphinstaterc";
           method = "symlink";
         }
+        {
+          file = ".config/xdg-desktop-portal-kderc";
+          method = "symlink";
+        }
+        {
+          file = ".local/state/xdg-desktop-portal-kdestaterc";
+          method = "symlink";
+        }
       ];
     };
   };
@@ -364,21 +372,27 @@ in
     extraPortals = [
       pkgs.xdg-desktop-portal-hyprland
       pkgs.xdg-desktop-portal-gtk
+      pkgs.kdePackages.xdg-desktop-portal-kde
     ];
     config = {
       common = {
         default = [ "gtk" ];
+        "org.freedesktop.impl.portal.FileChooser" = [ "kde" ];
+        "org.freedesktop.impl.portal.AppChooser" = [ "kde" ];
       };
       # NOTE: this per-DE section overrides `common` for ALL interfaces when
       # XDG_CURRENT_DESKTOP=Hyprland. The hyprland backend only implements
       # Screenshot/ScreenCast/GlobalShortcuts, so "gtk" must stay in the list
       # or org.freedesktop.portal.Settings disappears from the portal broker
-      # and libadwaita apps (Ptyxis etc.) always see light mode.
+      # and libadwaita apps (Ptyxis etc.) always see light mode. FileChooser
+      # and AppChooser are explicitly routed to "kde" for the Dolphin picker.
       hyprland = {
         default = [
           "hyprland"
           "gtk"
         ];
+        "org.freedesktop.impl.portal.FileChooser" = [ "kde" ];
+        "org.freedesktop.impl.portal.AppChooser" = [ "kde" ];
       };
     };
   };
@@ -767,12 +781,20 @@ in
 
     # Productivity & Daily Applications
     unstable.equibop
-    thunderbird
+    (thunderbird.override {
+      extraPrefs = ''
+        pref("widget.use-xdg-desktop-portal.file-picker", 1);
+      '';
+    })
     hunspell
     hunspellDicts.en_US
     hunspellDicts.es_AR
     unstable.onlyoffice-desktopeditors
-    unstable.mullvad-browser
+    (unstable.mullvad-browser.override {
+      extraPrefs = ''
+        pref("widget.use-xdg-desktop-portal.file-picker", 1);
+      '';
+    })
     mpv
     appimage-run
 
