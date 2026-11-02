@@ -35,7 +35,7 @@ ultix/
 ├── home/
 │   ├── default.nix                 # HM entry point: imports, identity, gnome-keyring user service
 │   ├── noctalia.nix                # HM Noctalia module + Hyprland module (the Wayland config lives here)
-│   ├── shell.nix                   # CLI apps, git/gh, zsh, brave, vscodium, flatpak, mimeapps, thunar
+│   ├── shell.nix                   # CLI apps, git/gh, zsh, brave, vscodium, flatpak, mimeapps, dolphin
 │   ├── hyprland.lua                # Hyprland Lua config, read into `extraConfig` (NOT auto-imported)
 │   └── noctalia.toml               # hand-written Noctalia config → ~/.config/noctalia/noctconf.toml
 ├── dotfiles/wallpaper.png          # binary asset; currently NOT referenced by any Nix file
@@ -249,7 +249,7 @@ Declared in `environment.persistence."/persist"` (`hideMounts = true`, `allowTra
   - `general`: gaps 5/10, border 2, dwindle. `decoration`: rounding 12, blur on, opacity 0.94/0.88.
   - Input: `us`/`altgr-intl`, `lv3:ralt_switch` — keep in sync with `services.xserver.xkb`.
   - Layer rules: `noctalia` and `gtk-layer-shell` get blur.
-  - Binds: Super+Return (ptyxis), Super+E (thunar), Super+B (brave), Super+Q close, Super+M exit (`hyprshutdown` if present, else `hyprctl dispatch exit`), Super+F fullscreen, Super+Shift+V float, Super+P pseudo, Super+J togglesplit, Super+Space/V/S/comma (Noctalia launcher/clipboard/control-center/settings), Alt+Tab (`window-switcher`), Super+Shift+S / Super+Shift+Ctrl+S (Noctalia screenshots), focus/workspace binds 1–9, mouse drag/resize, XF86 media/brightness keys.
+  - Binds: Super+Return (ptyxis), Super+E (dolphin), Super+B (brave), Super+Q close, Super+M exit (`hyprshutdown` if present, else `hyprctl dispatch exit`), Super+F fullscreen, Super+Shift+V float, Super+P pseudo, Super+J togglesplit, Super+Space/V/S/comma (Noctalia launcher/clipboard/control-center/settings), Alt+Tab (`window-switcher`), Super+Shift+S / Super+Shift+Ctrl+S (Noctalia screenshots), focus/workspace binds 1–9, mouse drag/resize, XF86 media/brightness keys.
   - **Known dead stub:** `hl.device({ name = "<YourMouseName>", ... })` is a leftover placeholder. It is harmless but should be given a real device name (from `hyprctl devices`) or removed. Don't imitate it in new code.
   - Prefer Noctalia IPC (`noctalia msg …`) for shell features in binds; see the noctalia input's `docs/user/ipc/` for the full command list.
 

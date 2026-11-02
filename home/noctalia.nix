@@ -36,6 +36,31 @@
     platformTheme.name = "kde"; # Uses native KDE theming/KColorScheme
   };
 
+  # Home Manager's qt module writes systemd.user.sessionVariables.QT_PLUGIN_PATH
+  # to ~/.config/environment.d/10-home-manager.conf with only the HM user
+  # profile, overriding NixOS's profileRelativeSessionVariables under UWSM.
+  # Include /run/current-system/sw so Dolphin discovers system-wide KF6 plugins
+  # (Ark's extract/compress/DnD plugins, kio-extras, thumbnailers, Breeze, etc.).
+  systemd.user.sessionVariables =
+    let
+      qtVersions = [
+        pkgs.qt5
+        pkgs.qt6
+      ];
+      mkQtPaths =
+        attr:
+        lib.concatStringsSep ":" (
+          lib.concatMap (qt: [
+            "${config.home.profileDirectory}/${qt.qtbase.${attr}}"
+            "/run/current-system/sw/${qt.qtbase.${attr}}"
+          ]) qtVersions
+        );
+    in
+    {
+      QT_PLUGIN_PATH = lib.mkForce (mkQtPaths "qtPluginPrefix");
+      QML2_IMPORT_PATH = lib.mkForce (mkQtPaths "qtQmlPrefix");
+    };
+
   home.sessionVariables = {
     QT_QPA_PLATFORMTHEME = "kde";
   };
@@ -67,24 +92,24 @@
         ];
       };
       wallpaper = {
-          enabled = true;
+        enabled = true;
       };
       settings = {
-      plugins = {
-        # Community source is built-in; just make sure it's enabled
-        enabled = [ "elijaharch/wl-screen-mirror" ];
+        plugins = {
+          # Community source is built-in; just make sure it's enabled
+          enabled = [ "elijaharch/wl-screen-mirror" ];
+        };
       };
-    };
 
-  };
+    };
   };
 
   home.file = {
-  # Target path (relative to home directory)
-  ".config/noctalia/noctconf.toml" = {
-    source = ./noctalia.toml;  # Path to file
-    recursive = true;       # If source is a directory
-  };
+    # Target path (relative to home directory)
+    ".config/noctalia/noctconf.toml" = {
+      source = ./noctalia.toml; # Path to file
+      recursive = true; # If source is a directory
+    };
   };
 
   wayland.windowManager.hyprland = {

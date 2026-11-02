@@ -206,6 +206,14 @@
         --filesystem=xdg-config/gtk-3.0:ro \
         --filesystem=xdg-config/gtk-4.0:ro
     '';
+
+    rebuildKdeSycoca = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      rm -f "${config.xdg.cacheHome}/ksycoca"*
+      XDG_CONFIG_DIRS="/etc/xdg:/etc/profiles/per-user/${config.home.username}/etc/xdg:/run/current-system/sw/etc/xdg" \
+      XDG_DATA_DIRS="${config.xdg.dataHome}:/etc/profiles/per-user/${config.home.username}/share:/run/current-system/sw/share" \
+      XDG_MENU_PREFIX="hyprland-" \
+        ${pkgs.kdePackages.kservice}/bin/kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    '';
   };
 
   # Terminal Emulator (Ptyxis) settings
@@ -213,22 +221,6 @@
     "org/gnome/Ptyxis" = {
       restore-session = false;
     };
-  };
-
-  xdg.configFile."Thunar/uca.xml" = {
-    force = true;
-    text = ''
-      <?xml version="1.0" encoding="UTF-8" ?>
-      <actions>
-        <action>
-          <name>Open Terminal Here</name>
-          <command>ptyxis --new-window -d %f</command>
-          <description>Open Ptyxis in the current folder</description>
-          <patterns>*</patterns>
-          <directories/>
-        </action>
-      </actions>
-    '';
   };
 
   # XDG MIME associations
@@ -285,7 +277,7 @@
       "text/x-makefile" = "codium.desktop";
       "text/x-cmake" = "codium.desktop";
 
-      "inode/directory" = "Thunar.desktop";
+      "inode/directory" = "org.kde.dolphin.desktop";
 
       # Photos & Images (Gwenview)
       "image/jpeg" = "org.kde.gwenview.desktop";

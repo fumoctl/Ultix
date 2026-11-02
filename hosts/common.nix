@@ -6,6 +6,44 @@
   ...
 }:
 
+let
+  # Standalone KDE/Dolphin XDG menu spec without pulling plasma-workspace into
+  # the runtime closure. Covers empty, plasma-, and UWSM's hyprland- prefixes,
+  # plus Plasma's .directory category metadata for Dolphin's "Open With" dialog.
+  kdeXdgMenus =
+    pkgs.runCommandLocal "kde-xdg-menus"
+      {
+        disallowedReferences = [ pkgs.kdePackages.plasma-workspace ];
+      }
+      ''
+        install -Dm644 \
+          "${pkgs.kdePackages.plasma-workspace}/etc/xdg/menus/plasma-applications.menu" \
+          "$out/etc/xdg/menus/applications.menu"
+        ln -s applications.menu "$out/etc/xdg/menus/plasma-applications.menu"
+        ln -s applications.menu "$out/etc/xdg/menus/hyprland-applications.menu"
+        mkdir -p "$out/share"
+        cp -r "${pkgs.kdePackages.plasma-workspace}/share/desktop-directories" \
+          "$out/share/desktop-directories"
+      '';
+
+  # Wrapper for KIO's KTerminalLauncherJob ("Open Terminal Here" & Terminal=true
+  # .desktop entries). Opens a new Ptyxis window in $PWD even when Ptyxis is
+  # already running via GApplication, and translates KIO's `-e` flag for Ptyxis.
+  kdePtyxis = pkgs.writeShellScriptBin "kde-ptyxis" ''
+    if [ "''${1:-}" = "-e" ]; then
+      shift
+      if [ "$#" -eq 1 ]; then
+        exec ${pkgs.ptyxis}/bin/ptyxis --new-window -d "$PWD" -x "$1"
+      fi
+      exec ${pkgs.ptyxis}/bin/ptyxis --new-window -d "$PWD" -- "$@"
+    fi
+    exec ${pkgs.ptyxis}/bin/ptyxis --new-window -d "$PWD" "$@"
+  '';
+
+  rebuildSycocaScript = ''
+    rm -fv "''${XDG_CACHE_HOME:-$HOME/.cache}/ksycoca"*
+  '';
+in
 {
   imports = [
     inputs.impermanence.nixosModules.impermanence
@@ -160,6 +198,8 @@
         ".local/share/flatpak"
         ".local/share/keyrings"
         ".local/share/Trash"
+        ".local/share/dolphin"
+        ".local/share/kxmlgui5"
         ".local/share/uv"
         ".local/state/noctalia"
         ".local/bin"
@@ -194,6 +234,14 @@
       ];
       files = [
         ".config/zsh/.zsh_history"
+        {
+          file = ".config/dolphinrc";
+          method = "symlink";
+        }
+        {
+          file = ".local/state/dolphinstaterc";
+          method = "symlink";
+        }
       ];
     };
   };
@@ -488,18 +536,50 @@
     uninstallUnmanaged = false;
   };
 
-  # --- File Management, Integration & Thumbnailers ---
-  services.gvfs.enable = true;
-  services.tumbler.enable = true;
-
-  programs.thunar = {
+  # --- File Management, Integration & Thumbnailers (Dolphin / KDE) ---
+  qt = {
     enable = true;
-    plugins = with pkgs; [
-      thunar-archive-plugin
-      thunar-volman
-    ];
+    platformTheme = "kde";
   };
-  programs.xfconf.enable = true;
+
+  xdg.menus.enable = true;
+  xdg.mime.enable = true;
+
+  services.gvfs.enable = true;
+  services.udisks2.enable = true;
+  services.udev.packages = [ pkgs.media-player-info ];
+
+  services.dbus.packages = with pkgs.kdePackages; [
+    dolphin
+    kio
+    kio-extras
+    kio-fuse
+    kio-admin
+  ];
+
+  systemd.packages = with pkgs.kdePackages; [
+    dolphin
+    kio
+    kio-extras
+    kio-fuse
+    kio-admin
+  ];
+
+  # System-level KDE defaults merged underneath ~/.config/kdeglobals via KConfig
+  # cascading, leaving ~/.config/kdeglobals mutable for Noctalia's kcolorscheme.
+  environment.etc."xdg/kdeglobals".text = ''
+    [General]
+    TerminalApplication=kde-ptyxis
+  '';
+
+  # Invalidate stale KSycoca caches across NixOS generations (store mtimes are 1970-01-01).
+  system.userActivationScripts.rebuildSycoca = rebuildSycocaScript;
+  systemd.user.services.nixos-rebuild-sycoca = {
+    description = "Rebuild KDE system configuration cache";
+    wantedBy = [ "graphical-session-pre.target" ];
+    serviceConfig.Type = "oneshot";
+    script = rebuildSycocaScript;
+  };
 
   # --- System Utilities & Developer Tooling ---
   programs.direnv = {
@@ -618,7 +698,29 @@
     google-antigravity-cli
 
     # File Management & Media Openers
-    icoextract
+    kdeXdgMenus
+    kdePtyxis
+    kdePackages.dolphin
+    kdePackages.dolphin-plugins
+    kdePackages.kio
+    kdePackages.kio-extras
+    kdePackages.kio-fuse
+    kdePackages.kio-admin
+    kdePackages.kservice
+    kdePackages.solid
+    kdePackages.kfilemetadata
+    kdePackages.baloo-widgets
+    kdePackages.kdegraphics-thumbnailers
+    kdePackages.ffmpegthumbs
+    kdePackages.kimageformats
+    kdePackages.qtimageformats
+    kdePackages.qtsvg
+    kdePackages.kiconthemes
+    kdePackages.qtwayland
+    kdePackages.breeze
+    kdePackages.breeze-icons
+    hicolor-icon-theme
+    icoutils
     kdePackages.gwenview
     lollypop
     kdePackages.okular
