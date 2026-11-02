@@ -220,6 +220,8 @@
   dconf.settings = {
     "org/gnome/Ptyxis" = {
       restore-session = false;
+      use-system-font = false;
+      font-name = "Inconsolata Nerd Font Mono Bold 14";
     };
   };
 
