@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   ...
@@ -21,24 +20,24 @@
     interface = "wlp98s0";
   };
 
-  boot.loader.limine = {
-    secureBoot.enable = lib.mkDefault false;
-  };
+  boot.loader.limine.secureBoot.enable = lib.mkDefault false;
 
   boot.kernelPackages = pkgs.linuxPackages_xanmod;
 
   # NVIDIA PRIME hybrid graphics
   boot.initrd.kernelModules = [ "amdgpu" ];
-  services.xserver.videoDrivers = ["modesetting" "nvidia"];
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true;
-  };
+  services.xserver.videoDrivers = [
+    "modesetting"
+    "nvidia"
+  ];
+
   hardware.nvidia = {
     modesetting.enable = true;
     open = true;
-    powerManagement.enable = true;
-    powerManagement.finegrained = true;
+    powerManagement = {
+      enable = true;
+      finegrained = true;
+    };
     nvidiaSettings = true;
     prime = {
       offload = {

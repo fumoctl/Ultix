@@ -28,7 +28,10 @@
   gtk = {
     enable = true;
     theme.name = "adw-gtk3-dark";
-    iconTheme.name = "breeze";
+    iconTheme = {
+      name = "breeze";
+      package = pkgs.kdePackages.breeze-icons;
+    };
   };
 
   qt = {
@@ -95,27 +98,19 @@
       wallpaper = {
         enabled = true;
       };
-      settings = {
-        plugins = {
-          # Community source is built-in; just make sure it's enabled
-          enabled = [ "elijaharch/wl-screen-mirror" ];
-        };
-      };
-
     };
   };
 
-  home.file = {
-    # Target path (relative to home directory)
-    ".config/noctalia/noctconf.toml" = {
-      source = ./noctalia.toml; # Path to file
-      recursive = true; # If source is a directory
-    };
-  };
+  home.file.".config/noctalia/noctconf.toml".source = ./noctalia.toml;
 
   wayland.windowManager.hyprland = {
     enable = true;
-    # Portals are managed system-wide in hosts/common.nix (`xdg.portal`).
+    # UWSM (`programs.hyprland.withUWSM = true` in hosts/desktop-env.nix) owns
+    # session startup, environment export, and graphical-session.target. Leaving
+    # HM's systemd integration enabled injects a competing hyprland-session.target
+    # hook that races UWSM.
+    systemd.enable = false;
+    # Portals are managed system-wide in hosts/desktop-env.nix (`xdg.portal`).
     # Leaving HM's default portalPackage enabled activates HM's `xdg.portal`
     # with only hyprland.portal and overrides NIX_XDG_DESKTOP_PORTAL_DIR in
     # 10-home-manager.conf, hiding system-wide gtk.portal and kde.portal.

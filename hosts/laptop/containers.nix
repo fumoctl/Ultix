@@ -1,10 +1,6 @@
 # Host-specific containers for fumonix-laptop.
 # Merged with the shared set defined in ../containers.nix.
-{ config
-, lib
-, pkgs
-, ...
-}:
+{ ... }:
 
 {
   virtualisation.oci-containers.containers = {

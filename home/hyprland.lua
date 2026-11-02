@@ -17,12 +17,9 @@ hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Ice")
 hl.env("HYPRCURSOR_SIZE", "24")
 
--- Autostart
+-- Autostart (UWSM manages systemd environment export and starts noctalia.service
+-- via graphical-session.target; only tray/session apps belong here)
 hl.on("hyprland.start", function()
-  hl.exec_cmd("noctalia")
-  hl.exec_cmd("systemctl --user import-environment PATH WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-  hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-  -- Autostart apps
   hl.exec_cmd("equibop -m")
   hl.exec_cmd("steam -silent")
 end)
@@ -56,11 +53,11 @@ hl.config({
 
   input = {
     accel_profile = "flat",
-    kb_layout  = "us",
+    kb_layout = "us",
     kb_variant = "altgr-intl",
-    kb_model   = "",
+    kb_model = "",
     kb_options = "lv3:ralt_switch",
-    kb_rules   = "",
+    kb_rules = "",
   },
 
   decoration = {
@@ -94,15 +91,6 @@ hl.config({
     force_default_wallpaper = 0,
     disable_hyprland_logo = true,
   },
-
-  
-})
-
--- Device-specific settings
-hl.device({
-  name = "<YourMouseName>",
-  accel_profile = "flat",
-  sensitivity = 0.0,
 })
 
 -- Bezier curves
@@ -147,7 +135,10 @@ hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'exit'"))
+hl.bind(
+  mainMod .. " + M",
+  hl.dsp.exec_cmd("uwsm check is-active >/dev/null 2>&1 && uwsm stop || hyprctl dispatch 'exit'")
+)
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())

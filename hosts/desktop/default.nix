@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   ...
@@ -16,22 +15,16 @@
 
   networking.hostName = "fumonix-desktop";
 
-  boot.loader.limine = {
-    secureBoot.enable = lib.mkDefault true;
-  };
+  boot.loader.limine.secureBoot.enable = lib.mkDefault true;
 
   # AMD GPU hardware acceleration
   boot.initrd.kernelModules = [ "amdgpu" ];
   services.xserver.videoDrivers = [ "modesetting" ];
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true;
-    extraPackages = with pkgs; [
-      libva
-      libva-vdpau-driver
-      libvdpau-va-gl
-    ];
-  };
+  hardware.graphics.extraPackages = with pkgs; [
+    libva
+    libva-vdpau-driver
+    libvdpau-va-gl
+  ];
 
   # CachyOS kernel optimized for Zen 4 (Ryzen 7600X)
   boot.kernelPackages = lib.mkDefault (

@@ -3,38 +3,23 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
-    chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
-    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    impermanence = {
-      url = "github:nix-community/impermanence";
-    };
-    disko = {
-      url = "github:nix-community/disko";
-    };
-    nur = {
-      url = "github:nix-community/NUR";
-    };
-    noctalia = {
-      url = "github:noctalia-dev/noctalia";
-    };
-    lsfg-vk = {
-      url = "github:Daaboulex/lsfg-vk-nix";
-    };
-    nix-alien = {
-      url = "github:thiagokokada/nix-alien";
-    };
-    antigravity-nix = {
-      url = "github:jacopone/antigravity-nix";
-    };
+    chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
+    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
+    impermanence.url = "github:nix-community/impermanence";
+    disko.url = "github:nix-community/disko";
+    noctalia.url = "github:noctalia-dev/noctalia";
+    lsfg-vk.url = "github:Daaboulex/lsfg-vk-nix";
+    nix-alien.url = "github:thiagokokada/nix-alien";
+    antigravity-nix.url = "github:jacopone/antigravity-nix";
   };
 
   nixConfig = {
@@ -52,49 +37,34 @@
 
   outputs =
     {
-      self,
       nixpkgs,
       home-manager,
       disko,
       chaotic,
-      nix-flatpak,
-      sops-nix,
       ...
     }@inputs:
     let
       system = "x86_64-linux";
+
+      mkHost =
+        hostModule:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          modules = [
+            disko.nixosModules.disko
+            home-manager.nixosModules.home-manager
+            chaotic.nixosModules.nyx-cache
+            chaotic.nixosModules.nyx-overlay
+            chaotic.nixosModules.nyx-registry
+            hostModule
+          ];
+        };
     in
     {
       nixosConfigurations = {
-        fumonix-desktop = nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = [
-            disko.nixosModules.disko
-            home-manager.nixosModules.home-manager
-            nix-flatpak.nixosModules.nix-flatpak
-            sops-nix.nixosModules.sops
-            chaotic.nixosModules.nyx-cache
-            chaotic.nixosModules.nyx-overlay
-            chaotic.nixosModules.nyx-registry
-            ./hosts/desktop/default.nix
-          ];
-        };
-
-        fumonix-laptop = nixpkgs.lib.nixosSystem {
-          inherit system;
-          specialArgs = { inherit inputs; };
-          modules = [
-            disko.nixosModules.disko
-            home-manager.nixosModules.home-manager
-            nix-flatpak.nixosModules.nix-flatpak
-            sops-nix.nixosModules.sops
-            chaotic.nixosModules.nyx-cache
-            chaotic.nixosModules.nyx-overlay
-            chaotic.nixosModules.nyx-registry
-            ./hosts/laptop/default.nix
-          ];
-        };
+        fumonix-desktop = mkHost ./hosts/desktop;
+        fumonix-laptop = mkHost ./hosts/laptop;
       };
     };
 }

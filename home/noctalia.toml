@@ -14,12 +14,12 @@ builtin = "Tokyo-Night"
 
 [widget.active_window]
 capsule = true
-font_scale = 1.1000000000000001
+font_scale = 1.1
 icon_size = 20
 max_length = 800
 
 [widget.audio_visualizer]
-scale = 1.4000000000000001
+scale = 1.4
 width = 60
 
 [widget.control-center]
@@ -31,10 +31,10 @@ hide_artist = true
 hide_when_no_media = true
 max_length = 800
 min_length = 0
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.network]
-scale = 1.1000000000000001
+scale = 1.1
 show_label = false
 
 [widget.spacer_2]
@@ -42,38 +42,36 @@ type = "spacer"
 
 [widget.volume]
 glyph = "volume"
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.mirror]
 type = "elijaharch/wl-screen-mirror:mirror"
 scale = 1.05
 
 [widget.battery]
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.brightness]
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.clipboard]
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.notifications]
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.tray]
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.workspaces]
-font_scale = 1.1000000000000001
+font_scale = 1.1
 scale = 1.3
 
 [widget.clock]
-scale = 1.1000000000000001
+scale = 1.1
 
 [widget.date]
-scale = 1.1000000000000001
+scale = 1.1
 
 [plugins]
-enabled = ["elijaharch/wl-screen-mirror"]
-
-
+enabled = [ "elijaharch/wl-screen-mirror" ]
