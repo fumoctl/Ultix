@@ -103,6 +103,7 @@
         ".config/AmneziaVPN.ORG"
         ".config/Podman Desktop"
         ".config/.android"
+        ".config/Windscribe"
 
         # Application data & state (~/.local)
         ".local/share/Steam"
@@ -113,6 +114,7 @@
         ".local/share/Trash"
         ".local/share/dolphin"
         ".local/share/kxmlgui5"
+        ".local/share/Windscribe"
         ".local/share/uv"
         ".local/state/noctalia"
         ".local/bin"

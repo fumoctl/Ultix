@@ -129,6 +129,15 @@ hl.window_rule({
   match = { class = "^org\\.freedesktop\\.impl\\.portal\\.desktop\\.kde$" },
   float = true,
 })
+hl.window_rule({
+  name = "float-windscribe",
+  match = { class = "^[Ww]indscribe$" },
+  float = true,
+  border_size = 0,
+  no_blur = true,
+  no_shadow = true,
+  rounding = 0,
+})
 
 -- Keybindings: Terminal & window operations
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))

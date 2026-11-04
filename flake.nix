@@ -19,6 +19,7 @@
     noctalia.url = "github:noctalia-dev/noctalia";
     lsfg-vk.url = "github:Daaboulex/lsfg-vk-nix";
     nix-alien.url = "github:thiagokokada/nix-alien";
+    windscribe-nixos.url = "github:fumoctl/windscribe-nixos";
     antigravity-nix.url = "github:jacopone/antigravity-nix";
   };
 

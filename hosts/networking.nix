@@ -1,9 +1,11 @@
 {
-  pkgs,
+  inputs,
   ...
 }:
 
 {
+  imports = [ inputs.windscribe-nixos.nixosModules.windscribe ];
+
   networking = {
     nftables.enable = true;
 
@@ -65,8 +67,8 @@
     };
   };
 
-  programs.amnezia-vpn = {
+  programs.windscribe = {
     enable = true;
-    package = pkgs.unstable.amnezia-vpn;
+    users = [ "fumoctl" ];
   };
 }
