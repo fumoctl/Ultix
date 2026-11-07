@@ -46,14 +46,12 @@ ultix/
 │   ├── hyprland.lua                # Hyprland Lua config, read into `extraConfig` (NOT auto-imported)
 │   ├── noctalia.toml               # hand-written Noctalia config → ~/.config/noctalia/noctconf.toml
 │   ├── shell.nix                   # Zsh, Git (commit signing) + `gh`, SSH config, terminal CLI tools, Ptyxis
-│   ├── apps.nix                    # User GUI/dev apps: Brave + extensions, VSCodium, Antigravity + MCP, media
+│   ├── apps.nix                    # User GUI/dev apps: Vivaldi + extensions, VSCodium, Antigravity + MCP, media
 │   ├── flatpak.nix                 # `nix-flatpak` HM module, apps, daily update timer, declarative `overrides`
 │   └── mime.nix                    # `xdg.mimeApps` grouped via `lib.genAttrs` + KSycoca activation hook
 ├── dotfiles/wallpaper.png          # binary asset; currently NOT referenced by any Nix file
-└── .idea/, .vscode/                # IDE dirs, gitignored
+└── .idea/, .vscode/, etc           # IDE dirs, gitignored
 ```
-
-`.gitignore` contains `.idea/` and `.vscode/`.
 
 ---
 
@@ -159,7 +157,7 @@ where `secrets.nix`, `noctalia.nix`, and `flatpak.nix` import their respective f
 ### Overlays (`hosts/common.nix` → `nixpkgs.overlays`)
 
 1. `unstable = import inputs.nixpkgs-unstable { system = prev.stdenv.hostPlatform.system; config = { allowUnfree = true; android_sdk.accept_license = true; }; }`
-   → **Use `pkgs.unstable.<pkg>`** for anything from unstable (e.g. `unstable.equibop`, `unstable.onlyoffice-desktopeditors`, `unstable.mullvad-browser`, `unstable.renpy`, `unstable.cowsay`, `unstable.lolcat`, `unstable.haskellPackages.misfortune`, `unstable.amnezia-vpn`, `unstable.context7-mcp`, `unstable.playwright-mcp`).
+   → **Use `pkgs.unstable.<pkg>`** for anything from unstable (e.g. `unstable.vivaldi`, `unstable.equibop`, `unstable.onlyoffice-desktopeditors`, `unstable.mullvad-browser`, `unstable.renpy`, `unstable.cowsay`, `unstable.lolcat`, `unstable.haskellPackages.misfortune`, `unstable.amnezia-vpn`, `unstable.context7-mcp`, `unstable.playwright-mcp`).
 2. `inputs.lsfg-vk.overlays.default` → provides `lsfg-vk`.
 3. `inputs.antigravity-nix.overlays.default` → provides `google-antigravity`, `google-antigravity-cli`.
 
@@ -213,7 +211,7 @@ Declared in `environment.persistence."/persist"` (`hosts/impermanence.nix`, `hid
 
 - **System dirs**: `/etc/NetworkManager/system-connections`, `/var/lib/{AccountsService,NetworkManager,bluetooth,containers,docker,flatpak,libvirt,nixos,systemd,sbctl}`
 - **System files**: `/etc/machine-id`, `/etc/ly/save.txt`
-- **User `fumoctl` dirs**: Home XDG dirs (`Desktop`, `Documents`, `Downloads`, `Music`, `Pictures`, `Public`, `Templates`, `Videos`, `Projects`, `Games`, `Applications`), plus app state: `.config/{BraveSoftware,Code,VSCodium,equibop,dconf,gh,lsfg-vk,containers,Antigravity,MangoHud,xfce4,AmneziaVPN.ORG,"Podman Desktop",.android}`, `.local/share/{Steam,containers,direnv,flatpak,keyrings,Trash,dolphin,kxmlgui5,uv}`, `.local/state/noctalia`, `.local/bin`, `.cache/{bun,uv,ms-playwright}`, `.var/app` (Flatpak user data), mail/editor/game/toolchain dirs (`.thunderbird`, `.vscode*`, `.duckdb`, `.agents`, `.steam`, `.gemini`, `.m2`, `.gradle`, `.android`, `.bun`, `.cargo`, `.rustup`), and `{ .gnupg, .ssh }` with `mode = "0700"`.
+- **User `fumoctl` dirs**: Home XDG dirs (`Desktop`, `Documents`, `Downloads`, `Music`, `Pictures`, `Public`, `Templates`, `Videos`, `Projects`, `Games`, `Applications`), plus app state: `.config/{vivaldi,Code,VSCodium,equibop,dconf,gh,lsfg-vk,containers,Antigravity,MangoHud,xfce4,AmneziaVPN.ORG,"Podman Desktop",.android}`, `.local/share/{Steam,containers,direnv,flatpak,keyrings,Trash,dolphin,kxmlgui5,uv}`, `.local/state/noctalia`, `.local/bin`, `.cache/{bun,uv,ms-playwright}`, `.var/app` (Flatpak user data), mail/editor/game/toolchain dirs (`.thunderbird`, `.vscode*`, `.duckdb`, `.agents`, `.steam`, `.gemini`, `.m2`, `.gradle`, `.android`, `.bun`, `.cargo`, `.rustup`), and `{ .gnupg, .ssh }` with `mode = "0700"`.
 - **User files**: `.config/zsh/.zsh_history`, plus symlinked KDE rc files (`.config/dolphinrc`, `.local/state/dolphinstaterc`, `.config/xdg-desktop-portal-kderc`, `.local/state/xdg-desktop-portal-kdestaterc`).
 
 **If you add an app that stores state in `$HOME`, you must add its directory to `hosts/impermanence.nix`, or the state vanishes on the next reboot.** Watch for `.config/<NewApp>`, `.local/share/<NewApp>`, `.cache/<NewApp>`.
@@ -264,7 +262,7 @@ Declared in `environment.persistence."/persist"` (`hosts/impermanence.nix`, `hid
   - `general`: gaps 5/10, border 2, dwindle. `decoration`: rounding 12, blur on, opacity 0.94/0.88.
   - Input: `us`/`altgr-intl`, `lv3:ralt_switch` — keep in sync with `services.xserver.xkb`.
   - Layer rules: `noctalia` and `gtk-layer-shell` get blur; KDE portal dialogs float.
-  - Binds: Super+Return (ptyxis), Super+E (dolphin), Super+B (brave), Super+Q close, Super+M exit (`uwsm stop` when active, else `hyprctl dispatch exit`), Super+F fullscreen, Super+Shift+V float, Super+P pseudo, Super+J togglesplit, Super+Space/V/S/comma (Noctalia launcher/clipboard/control-center/settings), Alt+Tab (`window-switcher`), Super+Shift+S / Super+Shift+Ctrl+S (Noctalia screenshots), focus/workspace binds 1–9, mouse drag/resize, XF86 media/brightness keys.
+  - Binds: Super+Return (ptyxis), Super+E (dolphin), Super+B (vivaldi), Super+Q close, Super+M exit (`uwsm stop` when active, else `hyprctl dispatch exit`), Super+F fullscreen, Super+Shift+V float, Super+P pseudo, Super+J togglesplit, Super+Space/V/S/comma (Noctalia launcher/clipboard/control-center/settings), Alt+Tab (`window-switcher`), Super+Shift+S / Super+Shift+Ctrl+S (Noctalia screenshots), focus/workspace binds 1–9, mouse drag/resize, XF86 media/brightness keys.
   - Prefer Noctalia IPC (`noctalia msg …`) for shell features in binds; see the noctalia input's `docs/user/ipc/` for the full command list.
 
 ### Noctalia (shell + bar)

@@ -13,7 +13,7 @@ in
     enable = true;
     defaultApplications = lib.mergeAttrsList [
       # Web & Mail
-      (associate "brave-browser.desktop" [
+      (associate "vivaldi-stable.desktop" [
         "text/html"
         "x-scheme-handler/http"
         "x-scheme-handler/https"

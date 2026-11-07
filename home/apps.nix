@@ -68,9 +68,16 @@
         };
       };
 
-  # Brave Browser with privacy and utility extensions
-  programs.brave = {
+  # Vivaldi Browser with proprietary media, Widevine DRM, Wayland, and extensions
+  programs.vivaldi = {
     enable = true;
+    package = pkgs.unstable.vivaldi.override {
+      proprietaryCodecs = true;
+      enableWidevine = true;
+    };
+    commandLineArgs = [
+      "--ozone-platform-hint=auto"
+    ];
     extensions = [
       { id = "ghmbeldphafepmbegfdlkpapadhbakde"; } # Proton Pass (Password manager)
       { id = "ldpochfccmkkmhdbclfhpagapcfdljkj"; } # Decentraleyes (Local CDN emulation)

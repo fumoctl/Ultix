@@ -8,7 +8,7 @@
 local mainMod = "SUPER"
 local terminal = "ptyxis --new-window"
 local fileManager = "dolphin"
-local browser = "brave --new-window"
+local browser = "vivaldi --new-window"
 
 -- Session environment
 hl.env("QT_QPA_PLATFORMTHEME", "kde")

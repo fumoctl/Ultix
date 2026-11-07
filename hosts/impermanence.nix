@@ -89,7 +89,7 @@
         "Games"
 
         # Application config (~/.config)
-        ".config/BraveSoftware"
+        ".config/vivaldi"
         ".config/Code"
         ".config/VSCodium"
         ".config/equibop"
