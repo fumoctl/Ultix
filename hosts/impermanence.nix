@@ -122,6 +122,7 @@
         ".local/share/keyrings"
         ".local/share/Trash"
         ".local/share/dolphin"
+        ".local/share/elisa"
         ".local/share/konsole"
         ".local/share/kxmlgui5"
         ".local/share/Windscribe"
@@ -176,6 +177,14 @@
           method = "symlink";
         }
         {
+          file = ".config/elisarc";
+          method = "symlink";
+        }
+        {
+          file = ".local/state/elisastaterc";
+          method = "symlink";
+        }
+        {
           file = ".config/konsolerc";
           method = "symlink";
         }
@@ -200,6 +209,8 @@
   systemd.tmpfiles.rules = [
     "f /persist/home/fumoctl/.config/dolphinrc 0600 fumoctl fumoctl -"
     "f /persist/home/fumoctl/.local/state/dolphinstaterc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.config/elisarc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.local/state/elisastaterc 0600 fumoctl fumoctl -"
     "f /persist/home/fumoctl/.config/konsolerc 0600 fumoctl fumoctl -"
     "f /persist/home/fumoctl/.local/state/konsolestaterc 0600 fumoctl fumoctl -"
     "f /persist/home/fumoctl/.config/xdg-desktop-portal-kderc 0600 fumoctl fumoctl -"

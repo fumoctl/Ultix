@@ -12,7 +12,7 @@
         "break",
         {
             "type": "host",
-            "key": "╭─󰇅 ",
+            "key": "╭─󰽟 ",
             "keyColor": "green"
         },
         {
@@ -69,12 +69,12 @@
         },
         {
             "type": "os",
-            "key": "├─ ", // Just get your distro's logo off nerdfonts.com
+            "key": "├─ ",
             "keyColor": "blue"
         },
         {
             "type": "kernel",
-            "key": "╰─ ",
+            "key": "╰─ ",
             "format": "{1} {2}",
             "keyColor": "blue"
         },

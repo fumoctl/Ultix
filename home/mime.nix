@@ -82,8 +82,8 @@ in
         "image/x-icon"
       ])
 
-      # Music & Audio (Lollypop)
-      (associate "org.gnome.Lollypop.desktop" [
+      # Music & Audio (Elisa)
+      (associate "org.kde.elisa.desktop" [
         "audio/mpeg"
         "audio/flac"
         "audio/x-vorbis+ogg"

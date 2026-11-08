@@ -11,7 +11,7 @@
     (writeTextDir "share/konsole/Ultix.profile" ''
       [Appearance]
       ColorScheme=noctalia
-      Font=Inconsolata Nerd Font Mono,14,-1,5,700,0,0,0,1,0,0,0,0,0,0,1,Bold
+      Font=Inconsolata Nerd Font,14,-1,5,700,0,0,0,1,0,0,0,0,0,0,1,Bold
 
       [General]
       Name=Ultix

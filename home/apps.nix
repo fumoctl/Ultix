@@ -25,7 +25,7 @@
       '';
     })
     mpv
-    lollypop
+    kdePackages.elisa
     appimage-run
 
     # Fun & miscellaneous
