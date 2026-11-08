@@ -105,7 +105,7 @@ in
 
   home.file = {
     ".fumoctl.jpg".source = ../dotfiles/.fumoctl.jpg;
-    "Pictures/Wallpapers/wallpaper.png".source = ../dotfiles/wallpaper.png;
+    "Pictures/Wallpapers".source = ../dotfiles/Wallpapers;
   };
 
   # --- Noctalia Shell ---
@@ -136,7 +136,6 @@ in
         blur_intensity = 0.5;
         tint_intensity = 0.3;
         tint_color = "surface";
-        wallpaper = "${config.home.homeDirectory}/Pictures/Wallpapers/wallpaper.png";
       };
 
       lockscreen_widgets = {
@@ -176,7 +175,13 @@ in
       wallpaper = {
         enabled = true;
         directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
-        default.path = "${config.home.homeDirectory}/Pictures/Wallpapers/wallpaper.png";
+        automation = {
+          enabled = true;
+          interval_seconds = 1800;
+          order = "random";
+          recursive = true;
+          pause_on_fullscreen = true;
+        };
       };
 
       plugins.enabled = [ "elijaharch/wl-screen-mirror" ];
