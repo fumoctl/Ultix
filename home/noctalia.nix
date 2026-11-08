@@ -177,7 +177,7 @@ in
         directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
         automation = {
           enabled = true;
-          interval_seconds = 1800;
+          interval_seconds = 300;
           order = "random";
           recursive = true;
           pause_on_fullscreen = true;
