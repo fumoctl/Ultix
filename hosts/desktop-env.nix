@@ -24,20 +24,6 @@ let
         cp -r "${pkgs.kdePackages.plasma-workspace}/share/desktop-directories" \
           "$out/share/desktop-directories"
       '';
-
-  # Wrapper for KIO's KTerminalLauncherJob ("Open Terminal Here" & Terminal=true
-  # .desktop entries). Opens a new Ptyxis window in $PWD even when Ptyxis is
-  # already running via GApplication, and translates KIO's `-e` flag for Ptyxis.
-  kdePtyxis = pkgs.writeShellScriptBin "kde-ptyxis" ''
-    if [ "''${1:-}" = "-e" ]; then
-      shift
-      if [ "$#" -eq 1 ]; then
-        exec ${pkgs.ptyxis}/bin/ptyxis --new-window -d "$PWD" -x "$1"
-      fi
-      exec ${pkgs.ptyxis}/bin/ptyxis --new-window -d "$PWD" -- "$@"
-    fi
-    exec ${pkgs.ptyxis}/bin/ptyxis --new-window -d "$PWD" "$@"
-  '';
 in
 {
   imports = [
@@ -134,7 +120,7 @@ in
       # XDG_CURRENT_DESKTOP=Umbriel. The umbriel backend only implements
       # Screenshot/ScreenCast/InputCapture, so "gtk" must stay in the list or
       # org.freedesktop.portal.Settings disappears from the portal broker and
-      # libadwaita apps (Ptyxis etc.) always see light mode. FileChooser and
+      # libadwaita/GTK4 apps always see light mode. FileChooser and
       # AppChooser are explicitly routed to "kde" for the Dolphin picker.
       umbriel = {
         default = [
@@ -232,12 +218,21 @@ in
     kio-admin
   ];
 
-  # System-level KDE defaults merged underneath ~/.config/kdeglobals via KConfig
-  # cascading, leaving ~/.config/kdeglobals mutable for Noctalia's kcolorscheme.
+  # System-level KDE defaults merged underneath ~/.config/{kdeglobals,konsolerc}
+  # via KConfig cascading, leaving the user files mutable for Noctalia & GUI edits.
   environment.etc."xdg/kdeglobals".text = ''
     [General]
-    TerminalApplication=kde-ptyxis
+    TerminalApplication=konsole
   '';
+
+  environment.etc."xdg/konsolerc".text = ''
+    [Desktop Entry]
+    DefaultProfile=Ultix.profile
+  '';
+
+  # Expose Konsole profiles installed in user/system packages (e.g. Ultix.profile)
+  # via XDG_DATA_DIRS while keeping ~/.local/share/konsole mutable.
+  environment.pathsToLink = [ "/share/konsole" ];
 
   # Clear stale KSycoca caches before graphical session start (Nix store mtimes are 1970-01-01).
   systemd.user.services.nixos-rebuild-sycoca = {
@@ -252,7 +247,7 @@ in
   environment.systemPackages = with pkgs; [
     # KDE / Dolphin integration & thumbnailers (system-wide for KF6 plugin discovery)
     kdeXdgMenus
-    kdePtyxis
+    kdePackages.konsole
     kdePackages.dolphin
     kdePackages.dolphin-plugins
     kdePackages.kio

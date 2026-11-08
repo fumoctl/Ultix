@@ -122,6 +122,7 @@
         ".local/share/keyrings"
         ".local/share/Trash"
         ".local/share/dolphin"
+        ".local/share/konsole"
         ".local/share/kxmlgui5"
         ".local/share/Windscribe"
         ".local/share/nix"
@@ -175,6 +176,14 @@
           method = "symlink";
         }
         {
+          file = ".config/konsolerc";
+          method = "symlink";
+        }
+        {
+          file = ".local/state/konsolestaterc";
+          method = "symlink";
+        }
+        {
           file = ".config/xdg-desktop-portal-kderc";
           method = "symlink";
         }
@@ -185,4 +194,15 @@
       ];
     };
   };
+
+  # Qt's QSaveFile (used by KConfig) refuses to follow dangling symlinks;
+  # pre-creating empty target files in /persist lets KDE apps save cleanly.
+  systemd.tmpfiles.rules = [
+    "f /persist/home/fumoctl/.config/dolphinrc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.local/state/dolphinstaterc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.config/konsolerc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.local/state/konsolestaterc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.config/xdg-desktop-portal-kderc 0600 fumoctl fumoctl -"
+    "f /persist/home/fumoctl/.local/state/xdg-desktop-portal-kdestaterc 0600 fumoctl fumoctl -"
+  ];
 }

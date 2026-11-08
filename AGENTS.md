@@ -43,11 +43,13 @@ ultix/
 │   ├── default.nix                 # HM entry point: imports sub-modules, identity, gnome-keyring user service
 │   ├── secrets.nix                 # `sops-nix` HM module, Age key, SSH/PGP/API secrets, PGP import service
 │   ├── noctalia.nix                # HM Noctalia + Umbriel (pure-Nix `settings`) + GTK/Qt/cursor
-│   ├── shell.nix                   # Zsh, Git (commit signing) + `gh`, SSH config, terminal CLI tools, Ptyxis
+│   ├── shell.nix                   # Zsh, Git (commit signing) + `gh`, SSH config, Fastfetch config, Konsole profile, terminal CLI tools
 │   ├── apps.nix                    # User GUI/dev apps: Vivaldi + extensions, VSCodium, Antigravity + MCP, media
 │   ├── flatpak.nix                 # `nix-flatpak` HM module, apps, daily update timer, declarative `overrides`
 │   └── mime.nix                    # `xdg.mimeApps` grouped via `lib.genAttrs` + KSycoca activation hook
-├── dotfiles/wallpaper.png          # binary asset; currently NOT referenced by any Nix file
+├── dotfiles/
+│   ├── fastfetch/                  # Fastfetch `config.jsonc` + `pngs/` symlinked to `~/.config/fastfetch`
+│   └── wallpaper.png               # default wallpaper symlinked to ~/Pictures/Wallpapers/wallpaper.png
 └── .idea/, .vscode/, etc           # IDE dirs, gitignored
 ```
 
@@ -213,8 +215,8 @@ Declared in `environment.persistence."/persist"` (`hosts/impermanence.nix`, `hid
 - **System dirs**: `/etc/NetworkManager/system-connections`, `/var/lib/{AccountsService,NetworkManager,bluetooth,containers,docker,flatpak,libvirt,nixos,systemd,sbctl,noctalia-greeter}`
 - **System files**: `/etc/machine-id`
 - **User `root` dirs**: `.local/share/nix` (persists `trusted-settings.json` for `sudo nixos-rebuild`)
-- **User `fumoctl` dirs**: Home XDG dirs (`Desktop`, `Documents`, `Downloads`, `Music`, `Pictures`, `Public`, `Templates`, `Videos`, `Projects`, `Games`, `Applications`), plus app state: `.config/{vivaldi,Code,VSCodium,equibop,dconf,gh,lsfg-vk,containers,Antigravity,MangoHud,xfce4,AmneziaVPN.ORG,"Podman Desktop",.android}`, `.local/share/{Steam,containers,direnv,flatpak,keyrings,Trash,dolphin,kxmlgui5,nix,uv}`, `.local/state/{noctalia,wireplumber}`, `.local/bin`, `.cache/{bun,uv,ms-playwright}`, `.var/app` (Flatpak user data), mail/editor/game/toolchain dirs (`.thunderbird`, `.vscode*`, `.duckdb`, `.agents`, `.steam`, `.gemini`, `.m2`, `.gradle`, `.android`, `.bun`, `.cargo`, `.rustup`), and `{ .gnupg, .ssh }` with `mode = "0700"`.
-- **User files**: `.config/zsh/.zsh_history`, plus symlinked KDE rc files (`.config/dolphinrc`, `.local/state/dolphinstaterc`, `.config/xdg-desktop-portal-kderc`, `.local/state/xdg-desktop-portal-kdestaterc`).
+- **User `fumoctl` dirs**: Home XDG dirs (`Desktop`, `Documents`, `Downloads`, `Music`, `Pictures`, `Public`, `Templates`, `Videos`, `Projects`, `Games`, `Applications`), plus app state: `.config/{vivaldi,Code,VSCodium,equibop,dconf,gh,lsfg-vk,containers,Antigravity,MangoHud,xfce4,AmneziaVPN.ORG,"Podman Desktop",.android}`, `.local/share/{Steam,containers,direnv,flatpak,keyrings,Trash,dolphin,konsole,kxmlgui5,nix,uv}`, `.local/state/{noctalia,wireplumber}`, `.local/bin`, `.cache/{bun,uv,ms-playwright}`, `.var/app` (Flatpak user data), mail/editor/game/toolchain dirs (`.thunderbird`, `.vscode*`, `.duckdb`, `.agents`, `.steam`, `.gemini`, `.m2`, `.gradle`, `.android`, `.bun`, `.cargo`, `.rustup`), and `{ .gnupg, .ssh }` with `mode = "0700"`.
+- **User files**: `.config/zsh/.zsh_history`, plus symlinked KDE rc files (`.config/{dolphinrc,konsolerc,xdg-desktop-portal-kderc}`, `.local/state/{dolphinstaterc,konsolestaterc,xdg-desktop-portal-kdestaterc}`).
 
 **If you add an app that stores state in `$HOME`, you must add its directory to `hosts/impermanence.nix`, or the state vanishes on the next reboot.** Watch for `.config/<NewApp>`, `.local/share/<NewApp>`, `.cache/<NewApp>`.
 
@@ -262,14 +264,14 @@ All three components are configured **purely in Nix** (via `settings` attrsets c
   - `layout`: `mode = "dwindle"` (`dwindle.preserve_split = true`), `gap = 10`, `extent_presets = [ 0.333 0.5 0.667 ]`, `scrolling.default_extent_fraction = 0.5`.
   - `appearance`: `prefer_no_csd = true`, `border_width = 2`, `corner_radius = 12`, `blur` (passes 2, radius 4, optimized), `shadow` (softness 10). `animation`: `enabled = true`, `layers.enabled = false`.
   - `window_rule` & `layer_rule`: window blur + focus-transition opacity (`0.94` focused / `0.88` unfocused), floating Noctalia Settings / UmbrielSharePicker / PiP / Steam toasts / KDE portal dialogs / undecorated Windscribe, and Noctalia + `gtk-layer-shell` layer blur.
-  - `keybinds`: `Mod+Return` (ptyxis), `Mod+E` (dolphin), `Mod+B` (vivaldi), `Mod+Q` close, `Mod+M` `session-quit`, `Mod+Slash` `cheatsheet-toggle`, `Mod+F` fullscreen, `Mod+T` float, `Mod+Shift+T` focus floating/tiled, `Mod+P` pin, `Mod+J` `layout-toggle-split`, `Mod+Shift+Tab` cycle `dwindle`/`scrolling` layout, `Mod+O` `overview-toggle`, `Mod+Space/V/S/Comma` (Noctalia launcher/clipboard/control-center/settings), `Alt+Tab` / `Alt+Shift+Tab` (`window-switcher hold`), `Mod+Shift+S` / `Mod+Shift+Ctrl+S` (Noctalia screenshots), directional focus & move, `Mod+1..9` / `Mod+Shift+1..9`, layout-aware `Mod+WheelDown/Up` (windows in `scrolling`, workspaces otherwise), and XF86 audio/mic/media/brightness via `noctalia msg` (Mod+left/right mouse drag & resize are built into Umbriel).
+  - `keybinds`: `Mod+Return` (konsole), `Mod+E` (dolphin), `Mod+B` (vivaldi), `Mod+Q` close, `Mod+M` `session-quit`, `Mod+Slash` `cheatsheet-toggle`, `Mod+F` fullscreen, `Mod+T` float, `Mod+Shift+T` focus floating/tiled, `Mod+P` pin, `Mod+J` `layout-toggle-split`, `Mod+Shift+Tab` cycle `dwindle`/`scrolling` layout, `Mod+O` `overview-toggle`, `Mod+Space/V/S/Comma` (Noctalia launcher/clipboard/control-center/settings), `Alt+Tab` / `Alt+Shift+Tab` (`window-switcher hold`), `Mod+Shift+S` / `Mod+Shift+Ctrl+S` (Noctalia screenshots), directional focus & move, `Mod+1..9` / `Mod+Shift+1..9`, layout-aware `Mod+WheelDown/Up` (windows in `scrolling`, workspaces otherwise), and XF86 audio/mic/media/brightness via `noctalia msg` (Mod+left/right mouse drag & resize are built into Umbriel).
   - Validate edits with `umbriel config validate`. Prefer Noctalia IPC (`noctalia msg …`) for shell features in binds; see the noctalia input's `docs/user/ipc/` for the full command list.
 
 ### Noctalia (shell + bar)
 
 - System (`hosts/desktop-env.nix`): `programs.noctalia = { enable = true; recommendedServices.enable = true; }`. The noctalia flake's NixOS module **disables** the nixpkgs noctalia module (`disabledModules`), and `recommendedServices` applies `mkDefault` for NetworkManager, Bluetooth, UPower, and power-profiles-daemon.
 - HM (`home/noctalia.nix`):
-  - `programs.noctalia = { enable = true; systemd.enable = true; settings = { ... }; }` holds the entire declarative bar, widget, theme (`builtin = "Tokyo-Night"`, `templates.builtin_ids = [ "gtk3" "gtk4" "kcolorscheme" "umbriel" ]`), Umbriel shell integration (`launch_apps_as_systemd_services`, `umbriel_overview_type_to_launch_enabled`, `umbriel_overview_close_on_launch_enabled`, `umbriel_audio_provider_enabled`), wallpaper, and plugin (`elijaharch/wl-screen-mirror`) configuration → generated `~/.config/noctalia/config.toml`, validated at build time by `noctalia config validate`.
+  - `programs.noctalia = { enable = true; systemd.enable = true; settings = { ... }; }` holds the entire declarative bar, widget, theme (`builtin = "Tokyo-Night"`, `templates.builtin_ids = [ "gtk3" "gtk4" "kcolorscheme" "umbriel" ]`, `templates.community_ids = [ "konsole" ]`), Umbriel shell integration (`launch_apps_as_systemd_services`, `umbriel_overview_type_to_launch_enabled`, `umbriel_overview_close_on_launch_enabled`, `umbriel_audio_provider_enabled`), wallpaper, and plugin (`elijaharch/wl-screen-mirror`) configuration → generated `~/.config/noctalia/config.toml`, validated at build time by `noctalia config validate`.
   - Keep `plugins.enabled` alongside any custom plugin widgets (e.g. `elijaharch/wl-screen-mirror`) so `noctalia config validate` passes without warnings.
   - Runtime GUI overrides go to `~/.local/state/noctalia/settings.toml` (**persisted** via `.local/state/noctalia`) and **win over** the declarative config. If a declarative change "does nothing", check that file.
   - Service: `~/.config/systemd/user/noctalia.service`, `WantedBy/PartOf/After graphical-session.target`, with `X-Restart-Triggers` on the generated config.
@@ -277,9 +279,9 @@ All three components are configured **purely in Nix** (via `settings` attrsets c
 ### Theming & KDE/Dolphin glue
 
 - GTK: `adw-gtk3-dark`, icon theme `breeze` (`kdePackages.breeze-icons`), cursor `Bibata-Modern-Ice` 24 (`home.pointerCursor` with `gtk.enable = true`).
-- Qt: `qt.platformTheme.name = "kde"` + `QT_QPA_PLATFORMTHEME=kde`; `kdePackages.qt6ct` (HM) and system-wide KF6/Dolphin/Ark/thumbnailer plugins discovered via `QT_PLUGIN_PATH` / `QML2_IMPORT_PATH` in `home/noctalia.nix`.
+- Qt: `qt.platformTheme.name = "kde"` + `QT_QPA_PLATFORMTHEME=kde`; `kdePackages.qt6ct` (HM) and system-wide KF6/Dolphin/Konsole/Ark/thumbnailer plugins discovered via `QT_PLUGIN_PATH` / `QML2_IMPORT_PATH` in `home/noctalia.nix`.
 - Extra HM packages for Noctalia hooks: `adw-gtk3` (theme lookup), `glib` (`gsettings`, used by the GTK apply hook).
-- `kdeXdgMenus` (`umbriel-applications.menu` + `applications.menu` + `plasma-applications.menu`) and `kdePtyxis` in `hosts/desktop-env.nix` give Dolphin standalone XDG menu categories (without pulling `plasma-workspace` into the closure) and route "Open Terminal Here" (`TerminalApplication=kde-ptyxis` in `/etc/xdg/kdeglobals`) to Ptyxis.
+- `kdeXdgMenus` (`umbriel-applications.menu` + `applications.menu` + `plasma-applications.menu`), `kdePackages.konsole`, `/etc/xdg/kdeglobals` (`TerminalApplication=konsole`), and `/etc/xdg/konsolerc` (`DefaultProfile=Ultix.profile`, installed via `home/shell.nix`) give Dolphin standalone XDG menu categories (without pulling `plasma-workspace` into the closure) and native Konsole integration ("Open Terminal Here" + `F4` embedded terminal panel).
 - `documentation.man.cache` and `fonts.fontconfig.defaultFonts` (JetBrainsMono NF / Noto CJK JP) are set system-wide; fonts referenced in `home/noctalia.nix` / `hosts/desktop-env.nix` / `home/shell.nix` must come from `hosts/desktop-env.nix`.
 
 ---
@@ -297,7 +299,7 @@ xdg.portal = {
 };
 ```
 
-The `umbriel` section overrides `common` for **all** interfaces when `XDG_CURRENT_DESKTOP=Umbriel`. The Umbriel portal only implements Screenshot/ScreenCast/InputCapture, so `gtk` must stay in the list, or `org.freedesktop.portal.Settings` disappears and libadwaita apps (Ptyxis) always render in light mode. Preserve the inline comment in `hosts/desktop-env.nix`. `FileChooser` and `AppChooser` are routed to `kde` (`xdg-desktop-portal-kde`) for the Dolphin-backed file picker, and `NIX_XDG_DESKTOP_PORTAL_DIR` in `home/noctalia.nix` points at `/run/current-system/sw/share/xdg-desktop-portal/portals`.
+The `umbriel` section overrides `common` for **all** interfaces when `XDG_CURRENT_DESKTOP=Umbriel`. The Umbriel portal only implements Screenshot/ScreenCast/InputCapture, so `gtk` must stay in the list, or `org.freedesktop.portal.Settings` disappears and libadwaita/GTK4 apps always render in light mode. Preserve the inline comment in `hosts/desktop-env.nix`. `FileChooser` and `AppChooser` are routed to `kde` (`xdg-desktop-portal-kde`) for the Dolphin-backed file picker, and `NIX_XDG_DESKTOP_PORTAL_DIR` in `home/noctalia.nix` points at `/run/current-system/sw/share/xdg-desktop-portal/portals`.
 
 Session env vars (`environment.sessionVariables`): `NIXOS_OZONE_WL=1`, `MOZ_ENABLE_WAYLAND=1`, `XDG_CURRENT_DESKTOP/SESSION_DESKTOP=Umbriel`, `XDG_SESSION_TYPE=wayland`, `QT_QPA_PLATFORM="wayland;xcb"`, `QT_WAYLAND_DISABLE_WINDOWDECORATION=1`, `GDK_BACKEND="wayland,x11,*"`, `SDL_VIDEODRIVER=wayland`, `CLUTTER_BACKEND=wayland`, `DICPATH="/run/current-system/sw/share/hunspell"`.
 
@@ -381,7 +383,7 @@ nix flake update noctalia
 7. **Flatpak is managed declaratively in `home/flatpak.nix`** via `inputs.nix-flatpak.homeManagerModules.nix-flatpak` (packages, daily update timer, and `services.flatpak.overrides` for GTK/icon `/nix/store` access, Bottles `home`, and OBS Qt env unsets), while `services.flatpak.enable = true` in `hosts/desktop-env.nix` enables the system daemon/portals. `.var/app` and `~/.local/share/flatpak` are persisted.
 8. **`home.activation` hooks that interpolate `pkgs` must run after `writeBoundary`** (via `lib.hm.dag.entryAfter [ "writeBoundary" ]`).
 9. **`hardware-configuration.nix` is generated** by `nixos-generate-config`; hand-edit only the kernel-module lists and never re-add `fileSystems` (disko owns them).
-10. **`dotfiles/wallpaper.png` is unused**; Noctalia wallpapers are managed by the shell (`.local/state/noctalia` is persisted).
+10. **`dotfiles/wallpaper.png` is symlinked to `~/Pictures/Wallpapers/wallpaper.png`** via `home.file` in `home/noctalia.nix` and set as `wallpaper.default.path` in Noctalia; runtime wallpaper choices in the shell UI are persisted under `.local/state/noctalia`.
 11. **`system.stateVersion = "26.05"` and `home.stateVersion = "26.05"`** — do **not** bump these to silence warnings; they gate migrations.
 12. **`pkgs.unstable` is an overlay attribute, not `pkgs.nixpkgs-unstable`.** Don't import `inputs.nixpkgs-unstable` inside modules; use `pkgs.unstable.*`.
 13. **No noctalia plugin mirror packaging:** the `elijaharch/wl-screen-mirror` plugin is fetched at runtime by Noctalia (community source), so its state lives under `~/.local/state/noctalia` (persisted).

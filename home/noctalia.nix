@@ -103,6 +103,8 @@ in
     gtk.enable = true;
   };
 
+  home.file."Pictures/Wallpapers/wallpaper.png".source = ../dotfiles/wallpaper.png;
+
   # --- Noctalia Shell ---
   programs.noctalia = {
     enable = true;
@@ -117,15 +119,23 @@ in
 
       theme = {
         builtin = "Tokyo-Night";
-        templates.builtin_ids = [
-          "gtk3"
-          "gtk4"
-          "kcolorscheme"
-          "umbriel"
-        ];
+        templates = {
+          builtin_ids = [
+            "gtk3"
+            "gtk4"
+            "kcolorscheme"
+            "umbriel"
+          ];
+          enable_community_templates = true;
+          community_ids = [ "konsole" ];
+        };
       };
 
-      wallpaper.enabled = true;
+      wallpaper = {
+        enabled = true;
+        directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
+        default.path = "${config.home.homeDirectory}/Pictures/Wallpapers/wallpaper.png";
+      };
 
       plugins.enabled = [ "elijaharch/wl-screen-mirror" ];
 
@@ -382,7 +392,7 @@ in
       keybinds = {
         # Applications & session
         "Mod+Return" = {
-          action = "spawn ptyxis --new-window";
+          action = "spawn konsole";
           repeat = false;
         };
         "Mod+E" = {

@@ -6,21 +6,25 @@
 
 {
   home.packages = with pkgs; [
-    ptyxis
+    # Default Konsole profile discovered via XDG_DATA_DIRS (keeps ~/.local/share/konsole
+    # writable for Noctalia's `konsole` colorscheme template and GUI profile edits).
+    (writeTextDir "share/konsole/Ultix.profile" ''
+      [Appearance]
+      ColorScheme=noctalia
+      Font=Inconsolata Nerd Font Mono,14,-1,5,700,0,0,0,1,0,0,0,0,0,0,1,Bold
+
+      [General]
+      Name=Ultix
+      Parent=FALLBACK/
+    '')
     btop
     eza
     bat
     fzf
   ];
 
-  # Terminal Emulator (Ptyxis) settings
-  dconf.settings = {
-    "org/gnome/Ptyxis" = {
-      restore-session = false;
-      use-system-font = false;
-      font-name = "Inconsolata Nerd Font Mono Bold 14";
-    };
-  };
+  # Fastfetch configuration & randomized PNG logos (~/.config/fastfetch)
+  xdg.configFile."fastfetch".source = ../dotfiles/fastfetch;
 
   # SSH client configuration with non-symlink 0600 permission safety
   home.file.".ssh/config_source" = {
