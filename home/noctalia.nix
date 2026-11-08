@@ -280,7 +280,10 @@ in
           0.5
           0.667
         ];
-        dwindle.preserve_split = true;
+        dwindle = {
+          preserve_split = true;
+          new_toward_cursor = true;
+        };
         scrolling.default_extent_fraction = 0.5;
       };
 
