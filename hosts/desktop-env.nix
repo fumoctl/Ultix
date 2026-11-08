@@ -7,8 +7,8 @@
 
 let
   # Standalone KDE/Dolphin XDG menu spec without pulling plasma-workspace into
-  # the runtime closure. Covers empty, plasma-, and UWSM's hyprland- prefixes,
-  # plus Plasma's .directory category metadata for Dolphin's "Open With" dialog.
+  # the runtime closure. Covers empty, plasma-, and umbriel- prefixes, plus
+  # Plasma's .directory category metadata for Dolphin's "Open With" dialog.
   kdeXdgMenus =
     pkgs.runCommandLocal "kde-xdg-menus"
       {
@@ -19,7 +19,7 @@ let
           "${pkgs.kdePackages.plasma-workspace}/etc/xdg/menus/plasma-applications.menu" \
           "$out/etc/xdg/menus/applications.menu"
         ln -s applications.menu "$out/etc/xdg/menus/plasma-applications.menu"
-        ln -s applications.menu "$out/etc/xdg/menus/hyprland-applications.menu"
+        ln -s applications.menu "$out/etc/xdg/menus/umbriel-applications.menu"
         mkdir -p "$out/share"
         cp -r "${pkgs.kdePackages.plasma-workspace}/share/desktop-directories" \
           "$out/share/desktop-directories"
@@ -42,32 +42,49 @@ in
 {
   imports = [
     inputs.noctalia.nixosModules.default
+    inputs.noctalia-greeter.nixosModules.default
+    inputs.umbriel.nixosModules.default
   ];
 
   # --- Session & Login Manager ---
-  programs.hyprland = {
-    enable = true;
-    xwayland.enable = true;
-    withUWSM = true;
-  };
+  programs.umbriel.enable = true;
 
   programs.noctalia = {
     enable = true;
     recommendedServices.enable = true;
   };
 
-  services.displayManager = {
-    ly.enable = true;
-    defaultSession = "hyprland-uwsm";
+  services.displayManager.noctalia-greeter = {
+    enable = true;
+    passwordless-sync-users = [ "fumoctl" ];
+    settings = {
+      session.default = "Umbriel";
+      user.default = "fumoctl";
+      appearance = {
+        theme_mode = "dark";
+        font_family = "JetBrainsMono Nerd Font";
+      };
+      cursor = {
+        theme = "Bibata-Modern-Ice";
+        size = 24;
+        path = "${pkgs.bibata-cursors}/share/icons";
+      };
+      keyboard = {
+        layout = "us";
+        variant = "altgr-intl";
+        options = "lv3:ralt_switch";
+        numlock = true;
+      };
+    };
   };
 
   # GNOME Keyring: secret service (libsecret) + PKCS#11, DBus-activated and
-  # started per-user by Home Manager. The NixOS module auto-unlocks via the
-  # `login` PAM service; `ly` is the actual entry point here, so it needs its
-  # own PAM hook. SSH component is intentionally NOT enabled (HM side):
-  # gpg-agent already provides the SSH agent via programs.gnupg.agent.
+  # started per-user by Home Manager. `noctalia-greeter` logs in through
+  # `greetd`, so its PAM stack unlocks the login keyring automatically. SSH
+  # component is intentionally NOT enabled (HM side): gpg-agent already provides
+  # the SSH agent via programs.gnupg.agent.
   services.gnome.gnome-keyring.enable = true;
-  security.pam.services.ly.enableGnomeKeyring = true;
+  security.pam.services.greetd.enableGnomeKeyring = true;
 
   # --- Input, Audio & Power ---
   services.xserver = {
@@ -99,11 +116,11 @@ in
   services.power-profiles-daemon.enable = lib.mkDefault true;
 
   # --- Portals & Session Environment ---
+  # `programs.umbriel.enable` registers `xdg-desktop-portal-umbriel` automatically.
   xdg.portal = {
     enable = true;
     wlr.enable = false;
     extraPortals = [
-      pkgs.xdg-desktop-portal-hyprland
       pkgs.xdg-desktop-portal-gtk
       pkgs.kdePackages.xdg-desktop-portal-kde
     ];
@@ -114,14 +131,14 @@ in
         "org.freedesktop.impl.portal.AppChooser" = [ "kde" ];
       };
       # NOTE: this per-DE section overrides `common` for ALL interfaces when
-      # XDG_CURRENT_DESKTOP=Hyprland. The hyprland backend only implements
-      # Screenshot/ScreenCast/GlobalShortcuts, so "gtk" must stay in the list
-      # or org.freedesktop.portal.Settings disappears from the portal broker
-      # and libadwaita apps (Ptyxis etc.) always see light mode. FileChooser
-      # and AppChooser are explicitly routed to "kde" for the Dolphin picker.
-      hyprland = {
+      # XDG_CURRENT_DESKTOP=Umbriel. The umbriel backend only implements
+      # Screenshot/ScreenCast/InputCapture, so "gtk" must stay in the list or
+      # org.freedesktop.portal.Settings disappears from the portal broker and
+      # libadwaita apps (Ptyxis etc.) always see light mode. FileChooser and
+      # AppChooser are explicitly routed to "kde" for the Dolphin picker.
+      umbriel = {
         default = [
-          "hyprland"
+          "umbriel"
           "gtk"
         ];
         "org.freedesktop.impl.portal.FileChooser" = [ "kde" ];
@@ -133,8 +150,8 @@ in
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
     MOZ_ENABLE_WAYLAND = "1";
-    XDG_CURRENT_DESKTOP = "Hyprland";
-    XDG_SESSION_DESKTOP = "Hyprland";
+    XDG_CURRENT_DESKTOP = "Umbriel";
+    XDG_SESSION_DESKTOP = "Umbriel";
     XDG_SESSION_TYPE = "wayland";
     QT_QPA_PLATFORM = "wayland;xcb";
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";

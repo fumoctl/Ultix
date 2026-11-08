@@ -1,5 +1,5 @@
 {
-  description = "Ultix: Modular host-separated NixOS Stable configuration with Hyprland, Noctalia, and Impermanence";
+  description = "Ultix: Modular host-separated NixOS Stable configuration with Umbriel, Noctalia, and Impermanence";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
@@ -14,6 +14,8 @@
     impermanence.url = "github:nix-community/impermanence";
     disko.url = "github:nix-community/disko";
     noctalia.url = "github:noctalia-dev/noctalia";
+    umbriel.url = "github:noctalia-dev/umbriel/cachix";
+    noctalia-greeter.url = "github:noctalia-dev/noctalia-greeter";
     lsfg-vk.url = "github:Daaboulex/lsfg-vk-nix";
     nix-alien.url = "github:thiagokokada/nix-alien";
     windscribe-nixos.url = "github:fumoctl/windscribe-nixos";
@@ -24,11 +26,13 @@
     extra-substituters = [
       "https://cache.nixos.org"
       "https://noctalia.cachix.org"
+      "https://umbriel.cachix.org"
       "https://nyx-cache.chaotic.cx"
     ];
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+      "umbriel.cachix.org-1:JfNq/2yg2S6D6z4Z2dVSZrZlDPQTKtexB6GAVLD98nw="
       "nyx-cache.chaotic.cx:dJxTrgMC3V3cFfyIiBQDQorG6k1LsqurH/srpMSq7qk="
     ];
   };

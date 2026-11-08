@@ -66,11 +66,20 @@
       "/var/lib/nixos"
       "/var/lib/systemd"
       "/var/lib/sbctl"
+      {
+        directory = "/var/lib/noctalia-greeter";
+        user = "greeter";
+        group = "greeter";
+        mode = "0750";
+      }
     ];
 
     files = [
       "/etc/machine-id"
-      "/etc/ly/save.txt"
+    ];
+
+    users.root.directories = [
+      ".local/share/nix"
     ];
 
     users.fumoctl = {
@@ -115,8 +124,10 @@
         ".local/share/dolphin"
         ".local/share/kxmlgui5"
         ".local/share/Windscribe"
+        ".local/share/nix"
         ".local/share/uv"
         ".local/state/noctalia"
+        ".local/state/wireplumber"
         ".local/bin"
 
         # Caches & Flatpak user state

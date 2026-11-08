@@ -137,7 +137,7 @@ in
     rm -f "${config.xdg.cacheHome}/ksycoca"*
     XDG_CONFIG_DIRS="/etc/xdg:/etc/profiles/per-user/${config.home.username}/etc/xdg:/run/current-system/sw/etc/xdg" \
     XDG_DATA_DIRS="${config.xdg.dataHome}:/etc/profiles/per-user/${config.home.username}/share:/run/current-system/sw/share" \
-    XDG_MENU_PREFIX="hyprland-" \
+    XDG_MENU_PREFIX="umbriel-" \
       ${pkgs.kdePackages.kservice}/bin/kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
   '';
 }
