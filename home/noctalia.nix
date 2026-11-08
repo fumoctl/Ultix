@@ -215,6 +215,7 @@ in
         tray.scale = 1.1;
         workspaces = {
           font_scale = 1.1;
+          hide_when_empty = true;
           scale = 1.3;
         };
         clock.scale = 1.1;
@@ -288,6 +289,9 @@ in
         };
         scrolling.default_extent_fraction = 0.5;
       };
+
+      # Persistent workspaces 1..9 on every output (never pruned or renumbered when empty)
+      workspace = map (n: { name = toString n; }) (lib.range 1 9);
 
       appearance = {
         prefer_no_csd = true;
@@ -451,7 +455,7 @@ in
           action = "workspace-set-layout toggle dwindle scrolling";
           repeat = false;
         };
-        "Mod+O" = {
+        "Mod+Alt+Tab" = {
           action = "overview-toggle";
           repeat = false;
         };
