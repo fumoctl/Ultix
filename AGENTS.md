@@ -48,6 +48,7 @@ ultix/
 │   ├── flatpak.nix                 # `nix-flatpak` HM module, apps, daily update timer, declarative `overrides`
 │   └── mime.nix                    # `xdg.mimeApps` grouped via `lib.genAttrs` + KSycoca activation hook
 ├── dotfiles/
+│   ├── .fumoctl.jpg                # user portrait symlinked to ~/.fumoctl.jpg & AccountsService
 │   ├── fastfetch/                  # Fastfetch `config.jsonc` + `pngs/` symlinked to `~/.config/fastfetch`
 │   └── wallpaper.png               # default wallpaper symlinked to ~/Pictures/Wallpapers/wallpaper.png
 └── .idea/, .vscode/, etc           # IDE dirs, gitignored
@@ -252,6 +253,7 @@ All three components are configured **purely in Nix** (via `settings` attrsets c
   - `cursor = { theme = "Bibata-Modern-Ice"; size = 24; path = "${pkgs.bibata-cursors}/share/icons"; }`.
   - `keyboard = { layout = "us"; variant = "altgr-intl"; options = "lv3:ralt_switch"; numlock = true; }`.
 - `passwordless-sync-users = [ "fumoctl" ]` installs a constrained Polkit rule allowing `fumoctl` to sync Noctalia appearance/wallpapers/monitors to the greeter without authentication.
+- `systemd.tmpfiles.rules` links `dotfiles/.fumoctl.jpg` to `/var/lib/AccountsService/icons/fumoctl` and seeds `/var/lib/AccountsService/users/fumoctl` so the greeter shows `fumoctl`'s portrait despite `/home/fumoctl` being `0700`.
 
 ### Umbriel (`hosts/desktop-env.nix` + `home/noctalia.nix`)
 
@@ -271,7 +273,7 @@ All three components are configured **purely in Nix** (via `settings` attrsets c
 
 - System (`hosts/desktop-env.nix`): `programs.noctalia = { enable = true; recommendedServices.enable = true; }`. The noctalia flake's NixOS module **disables** the nixpkgs noctalia module (`disabledModules`), and `recommendedServices` applies `mkDefault` for NetworkManager, Bluetooth, UPower, and power-profiles-daemon.
 - HM (`home/noctalia.nix`):
-  - `programs.noctalia = { enable = true; systemd.enable = true; settings = { ... }; }` holds the entire declarative bar, widget, theme (`builtin = "Tokyo-Night"`, `templates.builtin_ids = [ "gtk3" "gtk4" "kcolorscheme" "umbriel" ]`, `templates.community_ids = [ "konsole" ]`), `hooks.started` (`noctalia msg templates-apply`), Umbriel shell integration (`launch_apps_as_systemd_services`, `umbriel_overview_type_to_launch_enabled`, `umbriel_overview_close_on_launch_enabled`, `umbriel_audio_provider_enabled`), wallpaper, and plugin (`elijaharch/wl-screen-mirror`) configuration → generated `~/.config/noctalia/config.toml`, validated at build time by `noctalia config validate`.
+  - `programs.noctalia = { enable = true; systemd.enable = true; settings = { ... }; }` holds the entire declarative bar, widget, theme (`builtin = "Tokyo-Night"`, `templates.builtin_ids = [ "gtk3" "gtk4" "kcolorscheme" "umbriel" ]`, `templates.community_ids = [ "konsole" ]`), `hooks.started` (`templates-apply` + `greeter-sync`), Umbriel shell integration (`launch_apps_as_systemd_services`, `umbriel_overview_type_to_launch_enabled`, `umbriel_overview_close_on_launch_enabled`, `umbriel_audio_provider_enabled`), portrait (`shell.avatar_path` → `~/.fumoctl.jpg`, keep `dotfiles/.fumoctl.jpg` 1:1 square so `AsyncTextureCache` decodes at full avatar resolution), `location` (`auto_locate = true`, `shell.show_location = false`) + `weather`, automatic greeter sync (`shell.greeter_sync.auto_sync = true`), `lockscreen` (`dnd = true`, symlinked `wallpaper`, blur/tint) + centered `lockscreen_widgets` (`clock`), wallpaper, and plugin (`elijaharch/wl-screen-mirror`) configuration → generated `~/.config/noctalia/config.toml`, validated at build time by `noctalia config validate`.
   - Keep `plugins.enabled` alongside any custom plugin widgets (e.g. `elijaharch/wl-screen-mirror`) so `noctalia config validate` passes without warnings.
   - Runtime GUI overrides go to `~/.local/state/noctalia/settings.toml` (**persisted** via `.local/state/noctalia`) and **win over** the declarative config. If a declarative change "does nothing", check that file.
   - Service: `~/.config/systemd/user/noctalia.service`, `WantedBy/PartOf/After graphical-session.target`, with `X-Restart-Triggers` on the generated config.

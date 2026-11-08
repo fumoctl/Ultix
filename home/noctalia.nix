@@ -103,7 +103,10 @@ in
     gtk.enable = true;
   };
 
-  home.file."Pictures/Wallpapers/wallpaper.png".source = ../dotfiles/wallpaper.png;
+  home.file = {
+    ".fumoctl.jpg".source = ../dotfiles/.fumoctl.jpg;
+    "Pictures/Wallpapers/wallpaper.png".source = ../dotfiles/wallpaper.png;
+  };
 
   # --- Noctalia Shell ---
   programs.noctalia = {
@@ -111,10 +114,44 @@ in
     systemd.enable = true;
     settings = {
       shell = {
+        avatar_path = "${config.home.homeDirectory}/.fumoctl.jpg";
+        show_location = false;
         launch_apps_as_systemd_services = true;
         umbriel_overview_type_to_launch_enabled = true;
         umbriel_overview_close_on_launch_enabled = true;
         umbriel_audio_provider_enabled = true;
+        greeter_sync.auto_sync = true;
+      };
+
+      location.auto_locate = true;
+
+      weather = {
+        enabled = true;
+        unit = "metric";
+      };
+
+      lockscreen = {
+        dnd = true;
+        blurred_desktop = false;
+        blur_intensity = 0.5;
+        tint_intensity = 0.3;
+        tint_color = "surface";
+        wallpaper = "${config.home.homeDirectory}/Pictures/Wallpapers/wallpaper.png";
+      };
+
+      lockscreen_widgets = {
+        enabled = true;
+        schema_version = 2;
+        widget_order = [ "clock" ];
+        widget.clock = {
+          type = "clock";
+          cx = 2560.0;
+          cy = 720.0;
+          placement_width = 5120.0;
+          placement_height = 1440.0;
+          box_width = 544.0;
+          box_height = 304.0;
+        };
       };
 
       theme = {
@@ -131,7 +168,10 @@ in
         };
       };
 
-      hooks.started = "${lib.getExe config.programs.noctalia.package} msg templates-apply";
+      hooks.started = [
+        "${lib.getExe config.programs.noctalia.package} msg templates-apply"
+        "${lib.getExe config.programs.noctalia.package} msg greeter-sync"
+      ];
 
       wallpaper = {
         enabled = true;

@@ -64,6 +64,13 @@ in
     };
   };
 
+  # Seed AccountsService portrait for `fumoctl` so `noctalia-greeter` displays
+  # it on the login screen (`greeter` cannot traverse `0700` /home/fumoctl).
+  systemd.tmpfiles.rules = [
+    "L+ /var/lib/AccountsService/icons/fumoctl - - - - ${../dotfiles/.fumoctl.jpg}"
+    "f /var/lib/AccountsService/users/fumoctl 0600 root root - [User]\\nIcon=/var/lib/AccountsService/icons/fumoctl\\n"
+  ];
+
   # GNOME Keyring: secret service (libsecret) + PKCS#11, DBus-activated and
   # started per-user by Home Manager. `noctalia-greeter` logs in through
   # `greetd`, so its PAM stack unlocks the login keyring automatically. SSH
