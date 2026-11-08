@@ -131,6 +131,8 @@ in
         };
       };
 
+      hooks.started = "${lib.getExe config.programs.noctalia.package} msg templates-apply";
+
       wallpaper = {
         enabled = true;
         directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
