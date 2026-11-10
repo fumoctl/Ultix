@@ -424,6 +424,15 @@ in
           corner_radius = 0;
           opacity = 1.0;
         }
+        # Keep gamescope (whose Wayland backend clears app_id to "") and native
+        # Steam/Proton games opaque and unblurred so 5120x1440@200Hz frames are
+        # not composited through Kawase blur and can use direct scanout.
+        {
+          match.app_id = "^(gamescope|steam_app_.*|)$";
+          blur = false;
+          shadow = false;
+          opacity = 1.0;
+        }
       ];
 
       layer_rule = [
