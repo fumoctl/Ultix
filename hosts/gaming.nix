@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -37,6 +38,44 @@ let
   #    - Inside gs-run:          gs-run --mangoapp env LSFGVK_PROFILE="performance" %command%
   #      Keep `env LSFGVK_PROFILE=...` *after* `gs-run` so `lsfg-vk` only hooks the
   #      game inside gamescope, not gamescope's own Vulkan compositor.
+  # Runs a Wine command inside gamescope and waits on `wineserver -w` afterwards
+  # so launcher executables (e.g. Bottles's `wine start /wait InitSetting.exe`)
+  # that spawn the main game `.exe` and exit immediately do not cause
+  # `gamescopereaper` to SIGTERM the spawned game. Also reaps any leftover
+  # `ntsync` helper processes (`winedevice.exe`) attached to `gamescopereaper`
+  # when the session ends.
+  gs-wine-wait = pkgs.writeShellApplication {
+    name = "gs-wine-wait";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      wineserver_bin="$1"
+      shift
+      reaper_pid="$PPID"
+
+      # shellcheck disable=SC2329
+      cleanup() {
+        local child
+        local -a children=()
+        "$wineserver_bin" -k 2>/dev/null || true
+        if [ -r "/proc/$reaper_pid/comm" ] && [ "$(<"/proc/$reaper_pid/comm")" = "gamescopereaper" ]; then
+          read -r -a children <"/proc/$reaper_pid/task/$reaper_pid/children" || true
+          for child in "''${children[@]}"; do
+            if [ "$child" != "$$" ]; then
+              kill -9 "$child" 2>/dev/null || true
+            fi
+          done
+        fi
+      }
+      trap cleanup EXIT
+      trap 'exit 143' INT TERM HUP
+
+      rc=0
+      "$@" || rc=$?
+      "$wineserver_bin" -w || true
+      exit "$rc"
+    '';
+  };
+
   gs-run = pkgs.writeShellApplication {
     name = "gs-run";
     runtimeInputs = [ pkgs.coreutils ];
@@ -312,6 +351,46 @@ let
         inner_env+=("LD_LIBRARY_PATH=$saved_ld_library_path")
       fi
 
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          env)
+            if [ $# -gt 1 ] && [[ "$2" != -* ]]; then
+              shift
+            else
+              break
+            fi
+            ;;
+          [A-Za-z_]*=*)
+            if [[ "$1" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+              inner_env+=("$1")
+              shift
+            else
+              break
+            fi
+            ;;
+          *)
+            break
+            ;;
+        esac
+      done
+
+      wineserver_bin=""
+      for arg in "$@"; do
+        case "$arg" in
+          */wine | */wine64)
+            if [ -x "''${arg%/*}/wineserver" ]; then
+              wineserver_bin="''${arg%/*}/wineserver"
+              break
+            fi
+            ;;
+          wine | wine64)
+            if wineserver_bin="$(command -v wineserver 2>/dev/null)" && [ -n "$wineserver_bin" ]; then
+              break
+            fi
+            ;;
+        esac
+      done
+
       inner_cmd=(env)
       if [ -z "$saved_disable_lsfgvk" ]; then
         inner_cmd+=(-u DISABLE_LSFGVK)
@@ -319,6 +398,9 @@ let
       fi
       if [ "''${#inner_env[@]}" -gt 0 ]; then
         inner_cmd+=("''${inner_env[@]}")
+      fi
+      if [ -n "$wineserver_bin" ]; then
+        inner_cmd+=("${lib.getExe gs-wine-wait}" "$wineserver_bin")
       fi
       inner_cmd+=("$@")
 
@@ -332,6 +414,155 @@ let
 
       export DISABLE_LSFGVK=1
       exec "''${full_cmd[@]}"
+    '';
+  };
+
+  proton-ge-9-12 = pkgs.stdenvNoCC.mkDerivation {
+    pname = "proton-ge-bin";
+    version = "GE-Proton9-12";
+    src = pkgs.fetchurl {
+      url = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-12/GE-Proton9-12.tar.gz";
+      hash = "sha512-P1NkfBg7ieWE/EmI29OXmAfnDxXnAI0rZDqBNTzaIQJgELxJ4+scdoTYgA8P5rlQhfluIOzUhbhefFZFZMLdCQ==";
+    };
+    buildCommand = ''
+      mkdir -p "$out"
+      tar -C "$out" --strip=1 -x -f "$src"
+    '';
+  };
+
+  # Run `winetricks` (GUI or CLI verbs) against a regular non-UMU Bottle inside
+  # `steam-run`'s FHS environment using that Bottle's configured Soda/Proton runner.
+  bottles-winetricks = pkgs.writeShellApplication {
+    name = "bottles-winetricks";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gnugrep
+      gnused
+      steam-run
+      winetricks
+    ];
+    text = ''
+      usage() {
+        cat <<'EOF'
+      Usage:
+        bottles-winetricks <bottle-name-or-path> [winetricks-args-or-verbs...]
+        bottles-winetricks --list
+
+      Examples:
+        bottles-winetricks Soda                  # Open Winetricks GUI for bottle 'Soda'
+        bottles-winetricks Soda cjkfonts wmp11   # Install verbs into bottle 'Soda'
+      EOF
+      }
+
+      bottles_root="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles"
+      bottles_dir="$bottles_root/bottles"
+
+      list_bottles() {
+        shopt -s nullglob
+        local found=0
+        for yml in "$bottles_dir"/*/bottle.yml; do
+          local dir name runner
+          dir="$(dirname "$yml")"
+          name="$(sed -n "s/^Name:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+          runner="$(sed -n "s/^Runner:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+          printf '  %s (dir: %s, runner: %s)\n' "''${name:-$(basename "$dir")}" "$(basename "$dir")" "''${runner:-unknown}"
+          found=1
+        done
+        if [[ "$found" -eq 0 ]]; then
+          printf '  (no regular bottles found in %s)\n' "$bottles_dir"
+        fi
+      }
+
+      if [[ $# -eq 0 ]]; then
+        usage >&2
+        printf '\nAvailable bottles:\n' >&2
+        list_bottles >&2
+        exit 1
+      fi
+
+      case "$1" in
+        -h | --help)
+          usage
+          printf '\nAvailable bottles:\n'
+          list_bottles
+          exit 0
+          ;;
+        -l | --list)
+          list_bottles
+          exit 0
+          ;;
+      esac
+
+      target="$1"
+      shift
+
+      bottle_path=""
+      if [[ -f "$target/bottle.yml" ]]; then
+        bottle_path="$(realpath "$target")"
+      elif [[ -f "$bottles_dir/$target/bottle.yml" ]]; then
+        bottle_path="$bottles_dir/$target"
+      else
+        shopt -s nullglob
+        for yml in "$bottles_dir"/*/bottle.yml; do
+          name="$(sed -n "s/^Name:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+          if [[ "$name" == "$target" ]]; then
+            bottle_path="$(dirname "$yml")"
+            break
+          fi
+        done
+      fi
+
+      if [[ -z "$bottle_path" ]]; then
+        printf 'bottles-winetricks: bottle not found: %s\n\nAvailable bottles:\n' "$target" >&2
+        list_bottles >&2
+        exit 1
+      fi
+
+      yml="$bottle_path/bottle.yml"
+      runner="$(sed -n "s/^Runner:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+      runner_path="$(sed -n "s/^RunnerPath:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+
+      resolved_runner=""
+      for candidate in \
+        "$runner_path" \
+        "$bottles_root/runners/$runner" \
+        "''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d/$runner"; do
+        if [[ -n "$candidate" && -d "$candidate" ]]; then
+          resolved_runner="$candidate"
+          break
+        fi
+      done
+
+      if [[ -z "$resolved_runner" ]]; then
+        printf 'bottles-winetricks: runner "%s" for bottle "%s" was not found\n' "$runner" "$target" >&2
+        exit 1
+      fi
+
+      wine_bin_dir=""
+      for bin_candidate in \
+        "$resolved_runner/bin" \
+        "$resolved_runner/files/bin" \
+        "$resolved_runner/dist/bin"; do
+        if [[ -x "$bin_candidate/wine" ]]; then
+          wine_bin_dir="$bin_candidate"
+          break
+        fi
+      done
+
+      if [[ -z "$wine_bin_dir" ]]; then
+        printf 'bottles-winetricks: no executable wine binary found in %s\n' "$resolved_runner" >&2
+        exit 1
+      fi
+
+      export WINEPREFIX="$bottle_path"
+      export WINE="$wine_bin_dir/wine"
+      if [[ -x "$wine_bin_dir/wineserver" ]]; then
+        export WINESERVER="$wine_bin_dir/wineserver"
+      fi
+      export PATH="$wine_bin_dir:$PATH"
+
+      printf 'bottles-winetricks: prefix=%s\nbottles-winetricks: wine=%s\n' "$WINEPREFIX" "$WINE" >&2
+      exec steam-run winetricks "$@"
     '';
   };
 in
@@ -352,11 +583,32 @@ in
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = true;
     gamescopeSession.enable = true;
-    extraCompatPackages = with pkgs; [
-      proton-cachyos
-      proton-ge-custom
-    ];
   };
+
+  # Materialize Nix-managed Proton builds into `~/.local/share/Steam/compatibilitytools.d`
+  # as real directories containing symlinks into `/nix/store`:
+  # - Steam, Bottles, `umu-run`, and `bottles-winetricks` all scan this path natively
+  #   with zero Bottles source patches, and
+  # - keeping each outer tool directory a real directory ensures `Path.resolve()` in
+  #   UMU `game.yml` records the stable `~/.local/share/Steam/compatibilitytools.d/<name>`
+  #   path rather than a transient `/nix/store/<hash>` path that GC could remove.
+  home-manager.users.fumoctl.home.activation.syncSteamCompatTools =
+    inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ]
+      ''
+        compat_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d"
+        mkdir -p "$compat_dir"
+        for pair in \
+          "Proton-CachyOS:${pkgs.proton-cachyos}" \
+          "Proton-GE:${pkgs.proton-ge-custom}" \
+          "GE-Proton9-12:${proton-ge-9-12}"; do
+          name="''${pair%%:*}"
+          src="''${pair#*:}"
+          dest="$compat_dir/$name"
+          rm -rf "$dest"
+          mkdir -p "$dest"
+          ln -s "$src"/* "$dest"/
+        done
+      '';
 
   services.lact.enable = true;
 
@@ -367,5 +619,31 @@ in
     mesa-demos
     lsfg-vk
     gs-run
+    winetricks
+    bottles-winetricks
+    (unstable.bottles.override (
+      {
+        removeWarningPopup = true;
+        extraPkgs = _: [
+          lsfg-vk
+          gs-run
+          winetricks
+        ];
+      }
+      // lib.optionalAttrs (lib.versionOlder unstable.bottles-unwrapped.version "67.6") {
+        # Temporary 67.6 bump until nixpkgs-unstable catches up from 67.5 (adds
+        # `%command%` wrapper support in UMU and external `.exe` selection).
+        bottles-unwrapped = unstable.bottles-unwrapped.overrideAttrs (_: {
+          version = "67.6";
+          src = pkgs.fetchFromGitHub {
+            owner = "bottlesdevs";
+            repo = "bottles";
+            tag = "67.6";
+            hash = "sha256-omRbaEiaLiLzpL8XHCUWn+ST0HVXyHt70cD2PS4k77k=";
+          };
+        });
+      }
+    ))
+    unstable.protonplus
   ];
 }

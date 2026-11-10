@@ -15,8 +15,6 @@
     packages = [
       "com.github.tchx84.Flatseal"
       "com.obsproject.Studio"
-      "com.usebottles.bottles"
-      "com.vysp3r.ProtonPlus"
       "com.github.Matoking.protontricks"
       "com.ranfdev.DistroShelf"
     ];
@@ -36,9 +34,6 @@
           "xdg-data/icons:ro"
           "xdg-data/themes:ro"
         ];
-      };
-      "com.usebottles.bottles" = {
-        Context.filesystems = [ "home" ];
       };
       "com.obsproject.Studio" = {
         Context.unset-environment = [

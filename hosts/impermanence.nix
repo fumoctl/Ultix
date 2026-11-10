@@ -116,6 +116,8 @@
 
         # Application data & state (~/.local)
         ".local/share/Steam"
+        ".local/share/bottles"
+        ".local/share/umu"
         ".local/share/containers"
         ".local/share/direnv"
         ".local/share/flatpak"
@@ -136,6 +138,7 @@
         ".cache/bun"
         ".cache/uv"
         ".cache/ms-playwright"
+        ".cache/winetricks"
         ".var/app"
 
         # Editors, agents, mail, gaming & toolchains

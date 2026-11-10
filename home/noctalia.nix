@@ -470,6 +470,10 @@ in
           action = "window-close";
           repeat = false;
         };
+        "Mod+Shift+Ctrl+K" = {
+          action = "window-kill";
+          repeat = false;
+        };
         "Mod+M" = {
           action = "session-quit";
           repeat = false;
