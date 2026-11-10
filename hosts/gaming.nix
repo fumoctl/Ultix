@@ -431,14 +431,15 @@ let
   };
 
   # Run `winetricks` (GUI or CLI verbs) against a regular non-UMU Bottle inside
-  # `steam-run`'s FHS environment using that Bottle's configured Soda/Proton runner.
-  bottles-winetricks = pkgs.writeShellApplication {
-    name = "bottles-winetricks";
+  # a multi-arch Wine FHS environment matching `unstable.bottles` (full 32/64-bit
+  # FreeType/GStreamer/Vulkan/X11/Wayland libs, and no `--tmpfs /tmp` so
+  # `/tmp/.wine-$UID` `wineserver` sockets are shared cleanly with Bottles).
+  bottles-winetricks-inner = pkgs.writeShellApplication {
+    name = "bottles-winetricks-inner";
     runtimeInputs = with pkgs; [
       coreutils
       gnugrep
       gnused
-      steam-run
       winetricks
     ];
     text = ''
@@ -554,16 +555,221 @@ let
         exit 1
       fi
 
-      export WINEPREFIX="$bottle_path"
-      export WINE="$wine_bin_dir/wine"
-      if [[ -x "$wine_bin_dir/wineserver" ]]; then
-        export WINESERVER="$wine_bin_dir/wineserver"
-      fi
-      export PATH="$wine_bin_dir:$PATH"
+      wine_root="$(dirname "$wine_bin_dir")"
 
-      printf 'bottles-winetricks: prefix=%s\nbottles-winetricks: wine=%s\n' "$WINEPREFIX" "$WINE" >&2
-      exec steam-run winetricks "$@"
+      ld_paths=()
+      for lib_dir in \
+        "$wine_root/lib64" \
+        "$wine_root/lib" \
+        "$wine_root/lib32" \
+        "$wine_root/lib64/wine/x86_64-unix" \
+        "$wine_root/lib/wine/x86_64-unix" \
+        "$wine_root/lib/wine/i386-unix" \
+        "$wine_root/lib32/wine/i386-unix"; do
+        if [[ -d "$lib_dir" ]]; then
+          ld_paths+=("$lib_dir")
+        fi
+      done
+      joined_ld=""
+      if [[ "''${#ld_paths[@]}" -gt 0 ]]; then
+        joined_ld="$(IFS=:; printf '%s' "''${ld_paths[*]}")"
+      fi
+
+      dll_paths=()
+      for dll_dir in \
+        "$wine_root/lib64/wine" \
+        "$wine_root/lib/wine" \
+        "$wine_root/lib32/wine"; do
+        if [[ -d "$dll_dir" ]]; then
+          dll_paths+=("$dll_dir")
+        fi
+      done
+      joined_dll=""
+      if [[ "''${#dll_paths[@]}" -gt 0 ]]; then
+        joined_dll="$(IFS=:; printf '%s' "''${dll_paths[*]}")"
+      fi
+
+      gst_paths=()
+      for gst_dir in \
+        "$wine_root/lib64/gstreamer-1.0" \
+        "$wine_root/lib/gstreamer-1.0" \
+        "$wine_root/lib32/gstreamer-1.0"; do
+        if [[ -d "$gst_dir" ]]; then
+          gst_paths+=("$gst_dir")
+        fi
+      done
+      joined_gst=""
+      if [[ "''${#gst_paths[@]}" -gt 0 ]]; then
+        joined_gst="$(IFS=:; printf '%s' "''${gst_paths[*]}")"
+      fi
+
+      # When a regular Bottle uses a Proton runner directly (without `./proton`),
+      # Proton's `wined3d.dll` links against `libvkd3d-1.dll` and `libvkd3d-shader-1.dll`
+      # from `<runner>/files/lib{64,}/vkd3d/`, which `./proton` normally copies into
+      # `system32`/`syswow64`. Seed them if missing so D3D9/DirectShow registrations
+      # (such as `lavfilters`'s `LAVVideo.ax`) succeed instead of failing `regsvr32` (0x3).
+      shopt -s nullglob
+      if [[ -d "$wine_root/lib64/vkd3d" && -d "$bottle_path/drive_c/windows/system32" ]]; then
+        for dll in "$wine_root/lib64/vkd3d"/*.dll; do
+          dest_dll="$bottle_path/drive_c/windows/system32/$(basename "$dll")"
+          if [[ ! -e "$dest_dll" ]]; then
+            install -m 0644 "$dll" "$dest_dll"
+          fi
+        done
+      fi
+      if [[ -d "$wine_root/lib/vkd3d" && -d "$bottle_path/drive_c/windows/syswow64" ]]; then
+        for dll in "$wine_root/lib/vkd3d"/*.dll; do
+          dest_dll="$bottle_path/drive_c/windows/syswow64/$(basename "$dll")"
+          if [[ ! -e "$dest_dll" ]]; then
+            install -m 0644 "$dll" "$dest_dll"
+          fi
+        done
+      fi
+
+      # Scope runner `LD_LIBRARY_PATH` / `WINEDLLPATH` / `GST_PLUGIN_SYSTEM_PATH_1_0`
+      # strictly to `wine`/`wine64`/`wineserver` shims rather than exporting them globally:
+      # Proton ships older `libgraphene`/`libgst*` in `<runner>/files/lib64`, which would
+      # otherwise hijack GTK4 `zenity` (`libEGL.so.1` missing) when Winetricks opens its GUI.
+      wrapper_dir="$(mktemp -d -t bottles-winetricks.XXXXXX)"
+      trap 'rm -rf "$wrapper_dir"' EXIT
+
+      export _BW_LD_PATHS="$joined_ld"
+      export _BW_DLL_PATHS="$joined_dll"
+      export _BW_GST_PATHS="$joined_gst"
+      export _BW_WINELOADER="$wine_bin_dir/wine"
+
+      write_wine_shim() {
+        local shim_name="$1"
+        local real_bin="$2"
+        {
+          cat <<'EOF'
+      #!/usr/bin/env bash
+      if [[ -z "''${ORIG_LD_LIBRARY_PATH+x}" ]]; then
+        export ORIG_LD_LIBRARY_PATH="''${LD_LIBRARY_PATH:-}"
+      fi
+      if [[ -n "''${_BW_LD_PATHS:-}" ]]; then
+        export LD_LIBRARY_PATH="''${_BW_LD_PATHS}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+      fi
+      if [[ -n "''${_BW_DLL_PATHS:-}" ]]; then
+        export WINEDLLPATH="''${_BW_DLL_PATHS}''${WINEDLLPATH:+:$WINEDLLPATH}"
+      fi
+      if [[ -n "''${_BW_GST_PATHS:-}" ]]; then
+        export GST_PLUGIN_SYSTEM_PATH_1_0="''${_BW_GST_PATHS}"
+      fi
+      export WINELOADER="''${_BW_WINELOADER}"
+      EOF
+          printf 'exec %q "$@"\n' "$real_bin"
+        } > "$wrapper_dir/$shim_name"
+        chmod +x "$wrapper_dir/$shim_name"
+      }
+
+      write_wine_shim "wine" "$wine_bin_dir/wine"
+      export WINE="$wrapper_dir/wine"
+      export WINE_BIN="$wine_bin_dir/wine"
+
+      if [[ -x "$wine_bin_dir/wine64" ]]; then
+        write_wine_shim "wine64" "$wine_bin_dir/wine64"
+        export WINE64="$wrapper_dir/wine64"
+      fi
+
+      if [[ -x "$wine_bin_dir/wineserver" ]]; then
+        write_wine_shim "wineserver" "$wine_bin_dir/wineserver"
+        export WINESERVER="$wrapper_dir/wineserver"
+        export WINESERVER_BIN="$wine_bin_dir/wineserver"
+      fi
+
+      export WINEPREFIX="$bottle_path"
+      export WINEDLLOVERRIDES="winemenubuilder.exe=d''${WINEDLLOVERRIDES:+;$WINEDLLOVERRIDES}"
+      export WINETRICKS_LATEST_VERSION_CHECK="disabled"
+      export PATH="$wrapper_dir:$wine_bin_dir:$PATH"
+
+      printf 'bottles-winetricks: prefix=%s\nbottles-winetricks: wine=%s\n' "$WINEPREFIX" "$WINE_BIN" >&2
+      winetricks "$@"
     '';
+  };
+
+  bottles-winetricks = pkgs.unstable.buildFHSEnv {
+    name = "bottles-winetricks";
+    multiArch = true;
+    targetPkgs = _: [
+      bottles-winetricks-inner
+      pkgs.winetricks
+    ];
+    multiPkgs =
+      p:
+      with p;
+      [
+        alsa-lib
+        alsa-plugins
+        attr
+        cups
+        dbus
+        dosbox
+        fontconfig
+        freetype
+        giflib
+        glib
+        glibc
+        gnutls
+        gsm
+        gtk3
+        libgcrypt
+        libglvnd
+        libgpg-error
+        libgphoto2
+        libjpeg_turbo
+        libkrb5
+        libpcap
+        libpng
+        libpthread-stubs
+        libpulseaudio
+        libsm
+        libtiff
+        libunwind
+        libusb1
+        libv4l
+        libva
+        libx11
+        libxaw
+        libxcb
+        libxcomposite
+        libxcursor
+        libxdmcp
+        libxext
+        libxfixes
+        libxi
+        libxinerama
+        libxkbcommon
+        libxml2
+        libxmu
+        libxrandr
+        libxrender
+        libxslt
+        libxv
+        libxxf86vm
+        mpg123
+        ncurses
+        ocl-icd
+        openal
+        openldap
+        p11-kit
+        samba4
+        sane-backends
+        SDL2
+        udev
+        vulkan-loader
+        wayland
+        zlib
+      ]
+      ++ (with p.gst_all_1; [
+        gstreamer
+        gst-plugins-base
+        gst-plugins-good
+        gst-plugins-ugly
+        gst-plugins-bad
+        gst-libav
+      ]);
+    runScript = "bottles-winetricks-inner";
   };
 in
 {
