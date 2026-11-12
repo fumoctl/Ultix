@@ -18,7 +18,7 @@
         pref("widget.use-xdg-desktop-portal.file-picker", 1);
       '';
     })
-    unstable.onlyoffice-desktopeditors
+    unstable.euro-office-desktopeditors
     (unstable.mullvad-browser.override {
       extraPrefs = ''
         pref("widget.use-xdg-desktop-portal.file-picker", 1);

@@ -13,7 +13,7 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
     impermanence.url = "github:nix-community/impermanence";
     disko.url = "github:nix-community/disko";
-    noctalia.url = "github:noctalia-dev/noctalia";
+    noctalia.url = "github:noctalia-dev/noctalia/cachix";
     umbriel.url = "github:noctalia-dev/umbriel/cachix";
     noctalia-greeter.url = "github:noctalia-dev/noctalia-greeter";
     lsfg-vk.url = "github:Daaboulex/lsfg-vk-nix";
