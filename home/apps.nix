@@ -40,33 +40,34 @@
     mutableExtensionsDir = true;
   };
 
-  # Antigravity MCP servers
-  home.file.".gemini/config/mcp_config.json".source =
-    (pkgs.formats.json { }).generate "antigravity-mcp.json"
-      {
-        mcpServers = {
-          context7 = {
-            command = lib.getExe pkgs.unstable.context7-mcp;
-          };
-          dbcode = {
-            command = lib.getExe pkgs.bash;
-            args = [
-              "-c"
-              ''exec ${lib.getExe pkgs.nodejs} "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
-            ];
-          };
-          playwright = {
-            command = lib.getExe pkgs.unstable.playwright-mcp;
-            args = [
-              "--browser"
-              "chromium"
-            ];
-          };
-          rivalsearch = {
-            serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
-          };
+  # Antigravity MCP servers & global skills (ephemeral nix-shell helpers, no global packages)
+  home.file = {
+    ".gemini/config/skills/docx".source = ../dotfiles/skills/docx;
+    ".gemini/config/mcp_config.json".source = (pkgs.formats.json { }).generate "antigravity-mcp.json" {
+      mcpServers = {
+        context7 = {
+          command = lib.getExe pkgs.unstable.context7-mcp;
+        };
+        dbcode = {
+          command = lib.getExe pkgs.bash;
+          args = [
+            "-c"
+            ''exec ${lib.getExe pkgs.nodejs} "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
+          ];
+        };
+        playwright = {
+          command = lib.getExe pkgs.unstable.playwright-mcp;
+          args = [
+            "--browser"
+            "chromium"
+          ];
+        };
+        rivalsearch = {
+          serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
         };
       };
+    };
+  };
 
   # Vivaldi Browser with proprietary media, Widevine DRM, Wayland, and extensions
   programs.vivaldi = {

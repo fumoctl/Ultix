@@ -50,6 +50,7 @@ ultix/
 ├── dotfiles/
 │   ├── .fumoctl.jpg                # user portrait symlinked to ~/.fumoctl.jpg & AccountsService
 │   ├── fastfetch/                  # Fastfetch `config.jsonc` + `pngs/` symlinked to `~/.config/fastfetch`
+│   ├── skills/                     # Antigravity skills symlinked to `~/.gemini/config/skills`
 │   └── Wallpapers/                 # wallpapers symlinked to `~/Pictures/Wallpapers` and cycled by Noctalia
 └── .idea/, .vscode/, etc           # IDE dirs, gitignored
 ```
