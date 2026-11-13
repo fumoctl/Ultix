@@ -30,7 +30,7 @@ ultix/
 │   ├── networking.nix              # nftables, NetworkManager, systemd-resolved (DoT/DNSSEC), AmneziaVPN
 │   ├── desktop-env.nix             # Umbriel, Noctalia, Noctalia Greeter + PAM, PipeWire, portals, fonts, Dolphin/KIO
 │   ├── gaming.nix                  # graphics base, Steam, gamescope, gamemode, lact, gaming tools
-│   ├── containers.nix              # Docker, rootless Podman (`yugabyte` OCI), K8s tools, libvirt/QEMU
+│   ├── containers.nix              # Docker, rootless Podman (`postgres` OCI), K8s tools, libvirt/QEMU
 │   ├── packages.nix                # shared system CLI/dev tools, `direnv`, `gnupg` agent, `nix-ld`
 │   ├── desktop/
 │   │   ├── default.nix                 # AMD GPU + VA-API, Zen 4 CachyOS kernel, Secure Boot on, hostName
@@ -326,7 +326,7 @@ Session env vars (`environment.sessionVariables`): `NIXOS_OZONE_WL=1`, `MOZ_ENAB
 - **Docker** (rootful, `autoPrune.enable = true`) and **Podman** (rootless, `defaultNetwork.settings.dns_enabled = true`) are both enabled.
 - **Critical invariant:** `virtualisation.podman.dockerCompat = false` and `dockerSocket.enable = false`. Never enable them — the `docker` CLI and `/var/run/docker.sock` must keep pointing at dockerd (verified: the `oci-containers` backend is `podman`, while Docker owns the real socket).
 - `virtualisation.containers.storage.settings.storage.driver = "overlay"`.
-- `virtualisation.oci-containers.backend = "podman"` with shared container `yugabyte` (`docker.io/yugabytedb/yugabyte:latest`, `autoStart = false`, `--network=host`, volume `yugabyte-data:/home/yugabyte/var:Z`, runs as user `fumoctl`). It was fiddly to get right — don't change `cmd`/`extraOptions` without running it.
+- `virtualisation.oci-containers.backend = "podman"` with shared container `postgres` (`docker.io/library/postgres:18`, `autoStart = true`, `--network=host` bound strictly to `127.0.0.1,::1`, volume `postgres-data:/var/lib/postgresql:Z`, `io_method = io_uring` via a `jq`-patched Podman seccomp profile, Btrfs CoW/NVMe tuned, runs as user `fumoctl` under lowered systemd CPU/IO weight and `2G`/`3G` cgroup memory bounds).
 - Tools: `kind`, `kubectl`, `helm`, `k9s`, `skopeo`, `dive`, `podman-desktop`, `docker-compose`, `podman-compose`, `fuse-overlayfs`, `shadow` (newuidmap/newgidmap), plus `distrobox` in `hosts/packages.nix`.
 - **libvirt** (QEMU/KVM, `runAsRoot = true`, `swtpm` for TPM, `virtiofsd`) + `virt-manager` + `spice-vdagentd`. Emulators and external Flutter/Qt binaries rely on `programs.nix-ld.libraries` in `hosts/packages.nix`.
 

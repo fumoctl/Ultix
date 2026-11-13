@@ -40,34 +40,56 @@
     mutableExtensionsDir = true;
   };
 
-  # Antigravity MCP servers & global skills (ephemeral nix-shell helpers, no global packages)
-  home.file = {
-    ".gemini/config/skills/docx".source = ../dotfiles/skills/docx;
-    ".gemini/config/mcp_config.json".source = (pkgs.formats.json { }).generate "antigravity-mcp.json" {
-      mcpServers = {
-        context7 = {
-          command = lib.getExe pkgs.unstable.context7-mcp;
-        };
-        dbcode = {
-          command = lib.getExe pkgs.bash;
-          args = [
-            "-c"
-            ''exec ${lib.getExe pkgs.nodejs} "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
-          ];
-        };
-        playwright = {
-          command = lib.getExe pkgs.unstable.playwright-mcp;
-          args = [
-            "--browser"
-            "chromium"
-          ];
-        };
-        rivalsearch = {
-          serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
+  # Antigravity global skills
+  home.file.".gemini/config/skills/docx".source = ../dotfiles/skills/docx;
+
+  # Merge declarative Nix-backed MCP servers into `~/.gemini/config/mcp_config.json`
+  # as a regular 0600 file rather than a read-only HM symlink: `.gemini` is persisted
+  # and Antigravity rewrites `mcp_config.json` in place when UI/OAuth MCP servers are
+  # added, which otherwise breaks `home-manager-fumoctl.service` on reboot once
+  # `mcp_config.json.backup` already exists.
+  home.activation.antigravityMcpConfig =
+    let
+      declarativeMcp = (pkgs.formats.json { }).generate "antigravity-mcp.json" {
+        mcpServers = {
+          context7 = {
+            command = lib.getExe pkgs.unstable.context7-mcp;
+          };
+          dbcode = {
+            command = lib.getExe pkgs.bash;
+            args = [
+              "-c"
+              ''exec ${lib.getExe pkgs.nodejs} "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
+            ];
+          };
+          playwright = {
+            command = lib.getExe pkgs.unstable.playwright-mcp;
+            args = [
+              "--browser"
+              "chromium"
+            ];
+          };
+          rivalsearch = {
+            serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
+          };
         };
       };
-    };
-  };
+      jqBin = lib.getExe pkgs.jq;
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" "linkGeneration" ] ''
+      mcpCfg="$HOME/.gemini/config/mcp_config.json"
+      mkdir -p "$(dirname "$mcpCfg")"
+      rm -f "$mcpCfg.backup"
+      tmpCfg="$(mktemp)"
+      if [ -f "$mcpCfg" ] && [ ! -L "$mcpCfg" ] && ${jqBin} -e 'type == "object"' "$mcpCfg" >/dev/null 2>&1; then
+        ${jqBin} -s '.[0] * .[1]' "$mcpCfg" "${declarativeMcp}" > "$tmpCfg"
+      else
+        cat "${declarativeMcp}" > "$tmpCfg"
+      fi
+      rm -f "$mcpCfg"
+      install -m 600 "$tmpCfg" "$mcpCfg"
+      rm -f "$tmpCfg"
+    '';
 
   # Vivaldi Browser with proprietary media, Widevine DRM, Wayland, and extensions
   programs.vivaldi = {
