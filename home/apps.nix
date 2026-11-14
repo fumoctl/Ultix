@@ -10,6 +10,15 @@
     google-antigravity
     google-antigravity-cli
 
+    # --- LaTeX ---
+    # Full TeX Live (pdflatex/xelatex/lualatex, biber, latexmk, synctex, every package).
+    # LyX is the WYSIWYM editor: it imports raw `.tex` (tex2lyx) and exports clean `.tex`.
+    # Raw `.tex` editing + PDF preview/SyncTeX is covered by VSCodium's LaTeX Workshop below.
+    texliveFull
+    lyx
+    texlab # LSP, used by the VSCodium LaTeX Workshop setup below
+    tectonic # fast self-contained engine for quick one-off builds
+
     # Productivity & daily desktop applications
     resources
     unstable.equibop
@@ -18,7 +27,8 @@
         pref("widget.use-xdg-desktop-portal.file-picker", 1);
       '';
     })
-    unstable.euro-office-desktopeditors
+    libreoffice-fresh # includes the soffice/libreoffice CLI
+    pandoc
     (unstable.mullvad-browser.override {
       extraPrefs = ''
         pref("widget.use-xdg-desktop-portal.file-picker", 1);
@@ -41,7 +51,12 @@
   };
 
   # Antigravity global skills
-  home.file.".gemini/config/skills/docx".source = ../dotfiles/skills/docx;
+  # Drop skill folders (each with a SKILL.md) into `dotfiles/skills/` and they are
+  # symlinked individually into `~/.gemini/config/skills/`.
+  home.file.".gemini/config/skills" = {
+    source = ../dotfiles/skills;
+    recursive = true;
+  };
 
   # Merge declarative Nix-backed MCP servers into `~/.gemini/config/mcp_config.json`
   # as a regular 0600 file rather than a read-only HM symlink: `.gemini` is persisted

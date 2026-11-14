@@ -66,6 +66,13 @@ in
         "text/x-dockerfile"
         "text/x-makefile"
         "text/x-cmake"
+        "text/x-tex"
+        "text/x-bibtex"
+      ])
+
+      # LaTeX documents (LyX)
+      (associate "lyx.desktop" [
+        "application/x-lyx"
       ])
 
       # Photos & Images (Gwenview)
