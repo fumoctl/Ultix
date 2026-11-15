@@ -85,6 +85,7 @@
 
     kernel.sysctl = {
       "vm.max_map_count" = 2147483642;
+      "kernel.split_lock_mitigate" = 0;
       "fs.inotify.max_user_watches" = 524288;
       "fs.inotify.max_user_instances" = 8192;
       "net.ipv4.ip_forward" = 1;
@@ -96,7 +97,6 @@
   systemd.settings.Manager.DefaultLimitNOFILE = "1048576";
   systemd.user.extraConfig = ''
     DefaultLimitNOFILE=1048576
-    DefaultDelegate=yes
   '';
   systemd.package = pkgs.systemd.override { withUserDb = false; };
   services.userdbd.enable = lib.mkForce false;

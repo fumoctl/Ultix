@@ -64,8 +64,10 @@
       "/var/lib/flatpak"
       "/var/lib/libvirt"
       "/var/lib/nixos"
+      "/var/lib/power-profiles-daemon"
       "/var/lib/systemd"
       "/var/lib/sbctl"
+      "/var/lib/upower"
       {
         directory = "/var/lib/noctalia-greeter";
         user = "greeter";

@@ -107,6 +107,12 @@ in
   };
   services.upower.enable = lib.mkDefault true;
   services.power-profiles-daemon.enable = lib.mkDefault true;
+  # Start upowerd and power-profiles-daemon eagerly during boot (upstream's
+  # [Install] WantedBy=graphical.target is ignored by NixOS's systemd.packages)
+  # so saved power profiles apply at boot and session clients never stall on
+  # lazy D-Bus coldplug right after login.
+  systemd.services.upower.wantedBy = [ "graphical.target" ];
+  systemd.services.power-profiles-daemon.wantedBy = [ "graphical.target" ];
 
   # --- Portals & Session Environment ---
   # `programs.umbriel.enable` registers `xdg-desktop-portal-umbriel` automatically.
@@ -241,13 +247,14 @@ in
   # via XDG_DATA_DIRS while keeping ~/.local/share/konsole mutable.
   environment.pathsToLink = [ "/share/konsole" ];
 
-  # Clear stale KSycoca caches before graphical session start (Nix store mtimes are 1970-01-01).
+  # Rebuild KDE's KSycoca cache cleanly before graphical session start (Nix store mtimes are 1970-01-01).
   systemd.user.services.nixos-rebuild-sycoca = {
-    description = "Clear stale KDE system configuration cache";
+    description = "Rebuild KDE system configuration cache";
     wantedBy = [ "graphical-session-pre.target" ];
     serviceConfig.Type = "oneshot";
     script = ''
       rm -fv "''${XDG_CACHE_HOME:-$HOME/.cache}/ksycoca"*
+      XDG_MENU_PREFIX="umbriel-" ${pkgs.kdePackages.kservice}/bin/kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
     '';
   };
 
