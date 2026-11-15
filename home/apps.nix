@@ -12,21 +12,14 @@
 
     # --- LaTeX ---
     # Full TeX Live (pdflatex/xelatex/lualatex, biber, latexmk, synctex, every package).
-    # LyX is the WYSIWYM editor: it imports raw `.tex` (tex2lyx) and exports clean `.tex`.
     # Raw `.tex` editing + PDF preview/SyncTeX is covered by VSCodium's LaTeX Workshop below.
     texliveFull
-    lyx
     texlab # LSP, used by the VSCodium LaTeX Workshop setup below
     tectonic # fast self-contained engine for quick one-off builds
 
     # Productivity & daily desktop applications
     resources
     unstable.equibop
-    (thunderbird.override {
-      extraPrefs = ''
-        pref("widget.use-xdg-desktop-portal.file-picker", 1);
-      '';
-    })
     libreoffice-fresh # includes the soffice/libreoffice CLI
     pandoc
     (unstable.mullvad-browser.override {

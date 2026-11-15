@@ -19,7 +19,6 @@ in
         "x-scheme-handler/https"
       ])
       {
-        "x-scheme-handler/mailto" = "thunderbird.desktop";
         "inode/directory" = "org.kde.dolphin.desktop";
         "application/pdf" = "org.kde.okular.desktop";
       }
@@ -68,11 +67,6 @@ in
         "text/x-cmake"
         "text/x-tex"
         "text/x-bibtex"
-      ])
-
-      # LaTeX documents (LyX)
-      (associate "lyx.desktop" [
-        "application/x-lyx"
       ])
 
       # Photos & Images (Gwenview)

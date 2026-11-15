@@ -145,9 +145,6 @@
         ".var/app"
 
         # Editors, agents, mail, gaming & toolchains
-        ".thunderbird"
-        ".lyx"
-        ".texlive2025" # TeX Live user cache (luaotfload/fontconfig, updmap); bump with the TeX Live year
         ".vscode"
         ".vscode-oss"
         ".vscode-shared"
