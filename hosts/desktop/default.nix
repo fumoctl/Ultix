@@ -15,7 +15,7 @@
 
   networking.hostName = "ultix-desktop";
 
-  boot.loader.limine.secureBoot.enable = lib.mkDefault false;
+  boot.loader.limine.secureBoot.enable = lib.mkDefault true;
 
   # AMD GPU hardware acceleration
   boot.initrd.kernelModules = [ "amdgpu" ];
