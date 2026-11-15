@@ -88,15 +88,25 @@
       mcpCfg="$HOME/.gemini/config/mcp_config.json"
       mkdir -p "$(dirname "$mcpCfg")"
       rm -f "$mcpCfg.backup"
+      # Names of servers this block managed last time; any no longer declared get pruned.
+      stateFile="$HOME/.gemini/config/.nix-managed-mcp.json"
+      oldNames='[]'
+      if [ -f "$stateFile" ] && ${jqBin} -e 'type == "array"' "$stateFile" >/dev/null 2>&1; then
+        oldNames="$(cat "$stateFile")"
+      fi
+      newNames="$(${jqBin} -c '.mcpServers | keys' "${declarativeMcp}")"
       tmpCfg="$(mktemp)"
       if [ -f "$mcpCfg" ] && [ ! -L "$mcpCfg" ] && ${jqBin} -e 'type == "object"' "$mcpCfg" >/dev/null 2>&1; then
-        ${jqBin} -s '.[0] * .[1]' "$mcpCfg" "${declarativeMcp}" > "$tmpCfg"
+        ${jqBin} -s --argjson old "$oldNames" '
+          (.[0] | .mcpServers |= ((. // {}) | with_entries(select(.key as $k | ($old | index($k)) | not)))) * .[1]
+        ' "$mcpCfg" "${declarativeMcp}" > "$tmpCfg"
       else
         cat "${declarativeMcp}" > "$tmpCfg"
       fi
       rm -f "$mcpCfg"
       install -m 600 "$tmpCfg" "$mcpCfg"
       rm -f "$tmpCfg"
+      printf '%s\n' "$newNames" > "$stateFile"
     '';
 
   # Brave Browser with privacy and utility extensions
@@ -106,6 +116,7 @@
       { id = "ghmbeldphafepmbegfdlkpapadhbakde"; } # Proton Pass (Password manager)
       { id = "ldpochfccmkkmhdbclfhpagapcfdljkj"; } # Decentraleyes (Local CDN emulation)
       { id = "pkehgijcmpdhfbdbbnkijodmdjhbjlgp"; } # Privacy Badger (Heuristic tracker blocker)
+      { id = "jinjaccalgkegednnccohejagnlnfdag"; } # ViolentMonkey (Userscript Manager)
       { id = "ghbmnnjooekpmoecnnnilnnbdlolhkhi"; } # Google Docs Offline
       { id = "gbkeegbaiigmenfmjfclcdgdpimamgkj"; } # Google Docs MS Office
       { id = "donbcfbmhbcapadipfkeojnmajbakjdc"; } # Ruffle - Flash Emulator
