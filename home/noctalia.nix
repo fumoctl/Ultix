@@ -315,7 +315,7 @@ in
           size = 24;
         };
         focus = {
-          follows_mouse = true;
+          follows_mouse = "sloppy";
           hover_raises = false;
         };
       };

@@ -827,29 +827,14 @@ in
     gs-run
     winetricks
     bottles-winetricks
-    (unstable.bottles.override (
-      {
-        removeWarningPopup = true;
-        extraPkgs = _: [
-          lsfg-vk
-          gs-run
-          winetricks
-        ];
-      }
-      // lib.optionalAttrs (lib.versionOlder unstable.bottles-unwrapped.version "67.6") {
-        # Temporary 67.6 bump until nixpkgs-unstable catches up from 67.5 (adds
-        # `%command%` wrapper support in UMU and external `.exe` selection).
-        bottles-unwrapped = unstable.bottles-unwrapped.overrideAttrs (_: {
-          version = "67.6";
-          src = pkgs.fetchFromGitHub {
-            owner = "bottlesdevs";
-            repo = "bottles";
-            tag = "67.6";
-            hash = "sha256-omRbaEiaLiLzpL8XHCUWn+ST0HVXyHt70cD2PS4k77k=";
-          };
-        });
-      }
-    ))
+    (unstable.bottles.override {
+      removeWarningPopup = true;
+      extraPkgs = _: [
+        lsfg-vk
+        gs-run
+        winetricks
+      ];
+    })
     unstable.protonplus
   ];
 }
