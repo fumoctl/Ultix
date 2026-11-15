@@ -19,7 +19,7 @@
 
     # Productivity & daily desktop applications
     resources
-    unstable.equibop
+    unstable.discord
     libreoffice-fresh # includes the soffice/libreoffice CLI
     pandoc
     (unstable.mullvad-browser.override {

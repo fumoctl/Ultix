@@ -287,7 +287,7 @@ in
         xwayland = true;
         show_cheatsheet = false;
         autostart = [
-          "equibop -m"
+          "discord --start-minimized"
           "steam -silent"
         ];
       };

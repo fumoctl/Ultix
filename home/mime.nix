@@ -21,6 +21,7 @@ in
       {
         "inode/directory" = "org.kde.dolphin.desktop";
         "application/pdf" = "org.kde.okular.desktop";
+        "x-scheme-handler/discord" = "discord.desktop";
       }
 
       # Code, config & plaintext (VSCodium)

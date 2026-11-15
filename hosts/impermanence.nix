@@ -101,7 +101,7 @@
         ".config/BraveSoftware"
         ".config/Code"
         ".config/VSCodium"
-        ".config/equibop"
+        ".config/discord"
         ".config/dconf"
         ".config/gh"
         ".config/gcloud"
