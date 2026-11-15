@@ -20,7 +20,7 @@
     interface = "wlp98s0";
   };
 
-  boot.loader.limine.secureBoot.enable = lib.mkDefault false;
+  boot.loader.limine.secureBoot.enable = lib.mkDefault true;
 
   boot.kernelPackages = pkgs.linuxPackages_xanmod;
 
