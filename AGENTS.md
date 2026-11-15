@@ -348,6 +348,10 @@ nix.settings = {
 
 NixOS appends to `substituters` rather than replacing the default, so `/etc/nix/nix.conf` lists `cache.nixos.org` and `nyx-cache` **twice**. That is expected and harmless — don't add `mkForce` just to de-duplicate.
 
+Store maintenance & generation pruning (`hosts/common.nix`):
+- `programs.nh` (`flake = "/home/fumoctl/Projects/Ultix"`) enables `nh` and runs `nh-clean.timer` weekly (`--keep 15 --keep-since 14d --no-direnv`), with its `Persistent=true` timer stamp preserved across reboots via `/var/lib/systemd`; do not enable `nix.gc.automatic` alongside `programs.nh.clean.enable` (triggers a module warning). Store deduplication is handled on the fly by `nix.settings.auto-optimise-store = true`.
+- `boot.loader.limine.maxGenerations = lib.mkDefault 15` caps Limine boot menu entries and `/boot` ESP kernel/initrd files.
+
 ```bash
 # Build/switch
 sudo nixos-rebuild switch --flake .#fumonix-desktop

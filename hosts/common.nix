@@ -39,6 +39,16 @@
     ];
   };
 
+  programs.nh = {
+    enable = true;
+    flake = "/home/fumoctl/Projects/Ultix";
+    clean = {
+      enable = true;
+      dates = "weekly";
+      extraArgs = "--keep 15 --keep-since 14d --no-direnv";
+    };
+  };
+
   nixpkgs.config = {
     allowUnfree = true;
     android_sdk.accept_license = true;
@@ -61,7 +71,10 @@
   # --- Bootloader & Kernel Sysctl ---
   boot = {
     loader = {
-      limine.enable = lib.mkDefault true;
+      limine = {
+        enable = lib.mkDefault true;
+        maxGenerations = lib.mkDefault 15;
+      };
       efi = {
         canTouchEfiVariables = true;
         efiSysMountPoint = "/boot";
