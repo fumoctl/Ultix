@@ -13,7 +13,7 @@
     ./disko.nix
   ];
 
-  networking.hostName = "fumonix-laptop";
+  networking.hostName = "ultix-laptop";
 
   programs.captive-browser = {
     enable = true;

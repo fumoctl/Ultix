@@ -1,4 +1,4 @@
-# Host-specific containers for fumonix-desktop.
+# Host-specific containers for ultix-desktop.
 # Merged with the shared set defined in ../containers.nix.
 { ... }:
 

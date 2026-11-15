@@ -65,8 +65,8 @@
     in
     {
       nixosConfigurations = {
-        fumonix-desktop = mkHost ./hosts/desktop;
-        fumonix-laptop = mkHost ./hosts/laptop;
+        ultix-desktop = mkHost ./hosts/desktop;
+        ultix-laptop = mkHost ./hosts/laptop;
       };
     };
 }

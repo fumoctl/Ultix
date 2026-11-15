@@ -13,9 +13,9 @@
     ./disko.nix
   ];
 
-  networking.hostName = "fumonix-desktop";
+  networking.hostName = "ultix-desktop";
 
-  boot.loader.limine.secureBoot.enable = lib.mkDefault true;
+  boot.loader.limine.secureBoot.enable = lib.mkDefault false;
 
   # AMD GPU hardware acceleration
   boot.initrd.kernelModules = [ "amdgpu" ];
