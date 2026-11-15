@@ -105,7 +105,6 @@
         ".config/dconf"
         ".config/gh"
         ".config/gcloud"
-        ".config/lsfg-vk"
         ".config/containers"
         ".config/Antigravity"
         ".config/antigravity"

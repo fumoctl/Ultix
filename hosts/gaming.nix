@@ -430,6 +430,45 @@ let
     '';
   };
 
+  lsfgVkConf =
+    let
+      unvalidated = (pkgs.formats.toml { }).generate "lsfg-vk-conf.toml" {
+        version = 2;
+        global = {
+          allow_fp16 = true;
+          log_level = "info";
+        };
+        profile = [
+          {
+            name = "performance";
+            multiplier = 2;
+            flow_scale = 1.0;
+            performance_mode = true;
+            color_space = "srgb";
+            transfer_function = "srgb";
+            pacing_mode = "vsync";
+            override_present_mode = true;
+            preserve_swapchain_image_count = false;
+          }
+          {
+            name = "quality";
+            multiplier = 2;
+            flow_scale = 1.0;
+            performance_mode = false;
+            color_space = "srgb";
+            transfer_function = "srgb";
+            pacing_mode = "vsync";
+            override_present_mode = true;
+            preserve_swapchain_image_count = false;
+          }
+        ];
+      };
+    in
+    pkgs.runCommandLocal "lsfg-vk-conf.toml" { } ''
+      ${pkgs.lsfg-vk}/bin/lsfg-vk-cli validate -c "${unvalidated}" >/dev/null
+      cp "${unvalidated}" "$out"
+    '';
+
   # Run `winetricks` (GUI or CLI verbs) against a regular non-UMU Bottle inside
   # a multi-arch Wine FHS environment matching `unstable.bottles` (full 32/64-bit
   # FreeType/GStreamer/Vulkan/X11/Wayland libs, and no `--tmpfs /tmp` so
@@ -791,30 +830,39 @@ in
     gamescopeSession.enable = true;
   };
 
-  # Materialize Nix-managed Proton builds into `~/.local/share/Steam/compatibilitytools.d`
-  # as real directories containing symlinks into `/nix/store`:
-  # - Steam, Bottles, `umu-run`, and `bottles-winetricks` all scan this path natively
-  #   with zero Bottles source patches, and
-  # - keeping each outer tool directory a real directory ensures `Path.resolve()` in
-  #   UMU `game.yml` records the stable `~/.local/share/Steam/compatibilitytools.d/<name>`
-  #   path rather than a transient `/nix/store/<hash>` path that GC could remove.
-  home-manager.users.fumoctl.home.activation.syncSteamCompatTools =
-    inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ]
-      ''
-        compat_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d"
-        mkdir -p "$compat_dir"
-        for pair in \
-          "Proton-CachyOS:${pkgs.proton-cachyos}" \
-          "Proton-GE:${pkgs.proton-ge-custom}" \
-          "GE-Proton9-12:${proton-ge-9-12}"; do
-          name="''${pair%%:*}"
-          src="''${pair#*:}"
-          dest="$compat_dir/$name"
-          rm -rf "$dest"
-          mkdir -p "$dest"
-          ln -s "$src"/* "$dest"/
-        done
-      '';
+  home-manager.users.fumoctl = {
+    # Declarative `lsfg-vk` configuration (`performance` and `quality` profiles),
+    # validated at build time via `lsfg-vk-cli validate`.
+    xdg.configFile."lsfg-vk/conf.toml" = {
+      source = lsfgVkConf;
+      force = true;
+    };
+
+    # Materialize Nix-managed Proton builds into `~/.local/share/Steam/compatibilitytools.d`
+    # as real directories containing symlinks into `/nix/store`:
+    # - Steam, Bottles, `umu-run`, and `bottles-winetricks` all scan this path natively
+    #   with zero Bottles source patches, and
+    # - keeping each outer tool directory a real directory ensures `Path.resolve()` in
+    #   UMU `game.yml` records the stable `~/.local/share/Steam/compatibilitytools.d/<name>`
+    #   path rather than a transient `/nix/store/<hash>` path that GC could remove.
+    home.activation.syncSteamCompatTools =
+      inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ]
+        ''
+          compat_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d"
+          mkdir -p "$compat_dir"
+          for pair in \
+            "Proton-CachyOS:${pkgs.proton-cachyos}" \
+            "Proton-GE:${pkgs.proton-ge-custom}" \
+            "GE-Proton9-12:${proton-ge-9-12}"; do
+            name="''${pair%%:*}"
+            src="''${pair#*:}"
+            dest="$compat_dir/$name"
+            rm -rf "$dest"
+            mkdir -p "$dest"
+            ln -s "$src"/* "$dest"/
+          done
+        '';
+  };
 
   services.lact.enable = true;
 
