@@ -463,7 +463,7 @@ in
           repeat = false;
         };
         "Mod+B" = {
-          action = "spawn vivaldi --new-window";
+          action = "spawn brave --new-window";
           repeat = false;
         };
         "Mod+Q" = {

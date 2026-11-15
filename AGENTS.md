@@ -44,7 +44,7 @@ ultix/
 │   ├── secrets.nix                 # `sops-nix` HM module, Age key, SSH/PGP/API secrets, PGP import service
 │   ├── noctalia.nix                # HM Noctalia + Umbriel (pure-Nix `settings`) + GTK/Qt/cursor
 │   ├── shell.nix                   # Zsh, Git (commit signing) + `gh`, SSH config, Fastfetch config, Konsole profile, terminal CLI tools
-│   ├── apps.nix                    # User GUI/dev apps: Vivaldi + extensions, VSCodium, Antigravity + MCP, media
+│   ├── apps.nix                    # User GUI/dev apps: Brave + extensions, VSCodium, Antigravity + MCP, media
 │   ├── flatpak.nix                 # `nix-flatpak` HM module, apps, daily update timer, declarative `overrides`
 │   └── mime.nix                    # `xdg.mimeApps` grouped via `lib.genAttrs` + KSycoca activation hook
 ├── dotfiles/
@@ -162,7 +162,7 @@ where `secrets.nix`, `noctalia.nix`, and `flatpak.nix` import their respective f
 ### Overlays (`hosts/common.nix` → `nixpkgs.overlays`)
 
 1. `unstable = import inputs.nixpkgs-unstable { system = prev.stdenv.hostPlatform.system; config = { allowUnfree = true; android_sdk.accept_license = true; }; }`
-   → **Use `pkgs.unstable.<pkg>`** for anything from unstable (e.g. `unstable.vivaldi`, `unstable.equibop`, `unstable.onlyoffice-desktopeditors`, `unstable.mullvad-browser`, `unstable.renpy`, `unstable.cowsay`, `unstable.lolcat`, `unstable.haskellPackages.misfortune`, `unstable.amnezia-vpn`, `unstable.context7-mcp`, `unstable.playwright-mcp`).
+   → **Use `pkgs.unstable.<pkg>`** for anything from unstable (e.g. `unstable.equibop`, `unstable.onlyoffice-desktopeditors`, `unstable.mullvad-browser`, `unstable.renpy`, `unstable.cowsay`, `unstable.lolcat`, `unstable.haskellPackages.misfortune`, `unstable.amnezia-vpn`, `unstable.context7-mcp`, `unstable.playwright-mcp`).
 2. `inputs.lsfg-vk.overlays.default` → provides `lsfg-vk`.
 3. `inputs.antigravity-nix.overlays.default` → provides `google-antigravity`, `google-antigravity-cli`.
 
@@ -217,7 +217,7 @@ Declared in `environment.persistence."/persist"` (`hosts/impermanence.nix`, `hid
 - **System dirs**: `/etc/NetworkManager/system-connections`, `/var/lib/{AccountsService,NetworkManager,bluetooth,containers,docker,flatpak,libvirt,nixos,systemd,sbctl,noctalia-greeter}`
 - **System files**: `/etc/machine-id`
 - **User `root` dirs**: `.local/share/nix` (persists `trusted-settings.json` for `sudo nixos-rebuild`)
-- **User `fumoctl` dirs**: Home XDG dirs (`Desktop`, `Documents`, `Downloads`, `Music`, `Pictures`, `Public`, `Templates`, `Videos`, `Projects`, `Games`, `Applications`), plus app state: `.config/{vivaldi,Code,VSCodium,equibop,dconf,gh,lsfg-vk,containers,Antigravity,MangoHud,xfce4,AmneziaVPN.ORG,"Podman Desktop",.android}`, `.local/share/{Steam,bottles,umu,containers,direnv,flatpak,keyrings,Trash,dolphin,elisa,konsole,kxmlgui5,nix,uv}`, `.local/state/{noctalia,wireplumber}`, `.local/bin`, `.cache/{bun,uv,ms-playwright,winetricks}`, `.var/app` (Flatpak user data), mail/editor/game/toolchain dirs (`.vscode*`, `.duckdb`, `.agents`, `.steam`, `.gemini`, `.m2`, `.gradle`, `.android`, `.bun`, `.cargo`, `.rustup`), and `{ .gnupg, .ssh }` with `mode = "0700"`.
+- **User `fumoctl` dirs**: Home XDG dirs (`Desktop`, `Documents`, `Downloads`, `Music`, `Pictures`, `Public`, `Templates`, `Videos`, `Projects`, `Games`, `Applications`), plus app state: `.config/{BraveSoftware,Code,VSCodium,equibop,dconf,gh,lsfg-vk,containers,Antigravity,MangoHud,xfce4,AmneziaVPN.ORG,"Podman Desktop",.android}`, `.local/share/{Steam,bottles,umu,containers,direnv,flatpak,keyrings,Trash,dolphin,elisa,konsole,kxmlgui5,nix,uv}`, `.local/state/{noctalia,wireplumber}`, `.local/bin`, `.cache/{bun,uv,ms-playwright,winetricks}`, `.var/app` (Flatpak user data), mail/editor/game/toolchain dirs (`.vscode*`, `.duckdb`, `.agents`, `.steam`, `.gemini`, `.m2`, `.gradle`, `.android`, `.bun`, `.cargo`, `.rustup`), and `{ .gnupg, .ssh }` with `mode = "0700"`.
 - **User files**: `.config/zsh/.zsh_history`, plus symlinked KDE rc files (`.config/{dolphinrc,elisarc,konsolerc,xdg-desktop-portal-kderc}`, `.local/state/{dolphinstaterc,elisastaterc,konsolestaterc,xdg-desktop-portal-kdestaterc}`).
 
 **If you add an app that stores state in `$HOME`, you must add its directory to `hosts/impermanence.nix`, or the state vanishes on the next reboot.** Watch for `.config/<NewApp>`, `.local/share/<NewApp>`, `.cache/<NewApp>`.
@@ -267,7 +267,7 @@ All three components are configured **purely in Nix** (via `settings` attrsets c
   - `layout`: `mode = "dwindle"` (`dwindle = { preserve_split = true; new_toward_cursor = true; }`), `gap = 10`, `extent_presets = [ 0.333 0.5 0.667 ]`, `scrolling.default_extent_fraction = 0.5`; persistent `workspace` entries `"1".."9"` across all outputs (paired with `widget.workspaces.hide_when_empty = true` in Noctalia).
   - `appearance`: `prefer_no_csd = true`, `border_width = 2`, `corner_radius = 12`, `blur` (passes 2, radius 4, optimized), `shadow` (softness 10). `animation`: `enabled = true`, `layers.enabled = false`.
   - `window_rule` & `layer_rule`: window blur + focus-transition opacity (`0.94` focused / `0.88` unfocused), floating Noctalia Settings / UmbrielSharePicker / PiP / Steam toasts / KDE portal dialogs / undecorated Windscribe, and Noctalia + `gtk-layer-shell` layer blur.
-  - `keybinds`: `Mod+Return` (konsole), `Mod+E` (dolphin), `Mod+B` (vivaldi), `Mod+Q` close, `Mod+Shift+Ctrl+K` `window-kill`, `Mod+M` `session-quit`, `Mod+Slash` `cheatsheet-toggle`, `Mod+F` fullscreen, `Mod+T` float, `Mod+Shift+T` focus floating/tiled, `Mod+P` pin, `Mod+J` `layout-toggle-split`, `Mod+Shift+Tab` cycle `dwindle`/`scrolling` layout, `Mod+O` `overview-toggle`, `Mod+Space/V/S/Comma` (Noctalia launcher/clipboard/control-center/settings), `Alt+Tab` / `Alt+Shift+Tab` (`window-switcher hold`), `Mod+Shift+S` / `Mod+Shift+Ctrl+S` (Noctalia screenshots), directional focus & move, `Mod+1..9` / `Mod+Shift+1..9`, layout-aware `Mod+WheelDown/Up` (windows in `scrolling`, workspaces otherwise), and XF86 audio/mic/media/brightness via `noctalia msg` (Mod+left/right mouse drag & resize are built into Umbriel).
+  - `keybinds`: `Mod+Return` (konsole), `Mod+E` (dolphin), `Mod+B` (brave), `Mod+Q` close, `Mod+Shift+Ctrl+K` `window-kill`, `Mod+M` `session-quit`, `Mod+Slash` `cheatsheet-toggle`, `Mod+F` fullscreen, `Mod+T` float, `Mod+Shift+T` focus floating/tiled, `Mod+P` pin, `Mod+J` `layout-toggle-split`, `Mod+Shift+Tab` cycle `dwindle`/`scrolling` layout, `Mod+O` `overview-toggle`, `Mod+Space/V/S/Comma` (Noctalia launcher/clipboard/control-center/settings), `Alt+Tab` / `Alt+Shift+Tab` (`window-switcher hold`), `Mod+Shift+S` / `Mod+Shift+Ctrl+S` (Noctalia screenshots), directional focus & move, `Mod+1..9` / `Mod+Shift+1..9`, layout-aware `Mod+WheelDown/Up` (windows in `scrolling`, workspaces otherwise), and XF86 audio/mic/media/brightness via `noctalia msg` (Mod+left/right mouse drag & resize are built into Umbriel).
   - Validate edits with `umbriel config validate`. Prefer Noctalia IPC (`noctalia msg …`) for shell features in binds; see the noctalia input's `docs/user/ipc/` for the full command list.
 
 ### Noctalia (shell + bar)
