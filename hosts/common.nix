@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   inputs,
@@ -117,6 +118,21 @@
 
   # --- Locale & Time ---
   services.tzupdate.enable = true;
+  systemd.services.tzupdate = lib.mkIf config.services.tzupdate.enable {
+    wantedBy = lib.mkForce [ ];
+    after = [ "NetworkManager-wait-online.service" ];
+    wants = [ "NetworkManager-wait-online.service" ];
+    serviceConfig.SuccessExitStatus = 1;
+  };
+  networking.networkmanager.dispatcherScripts = lib.mkIf config.services.tzupdate.enable [
+    {
+      source = pkgs.writeShellScript "tzupdate" ''
+        if [ "$2" = "up" ] && [ "$1" != "lo" ] && [ "''${CONNECTION_EXTERNAL:-0}" != "1" ]; then
+          ${config.systemd.package}/bin/systemctl start --no-block tzupdate.service
+        fi
+      '';
+    }
+  ];
   time.timeZone = lib.mkDefault "America/Argentina/Buenos_Aires";
 
   i18n = {
