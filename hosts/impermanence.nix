@@ -116,7 +116,7 @@
         ".config/Podman Desktop"
         ".config/.android"
         ".config/Windscribe"
-        ".config/libreoffice"
+        ".config/onlyoffice"
 
         # Application data & state (~/.local)
         ".local/share/Steam"
@@ -131,6 +131,7 @@
         ".local/share/elisa"
         ".local/share/konsole"
         ".local/share/kxmlgui5"
+        ".local/share/onlyoffice"
         ".local/share/Windscribe"
         ".local/share/nix"
         ".local/share/uv"

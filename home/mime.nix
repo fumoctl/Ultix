@@ -70,6 +70,22 @@ in
         "text/x-bibtex"
       ])
 
+      # Office Documents (OnlyOffice)
+      (associate "onlyoffice-desktopeditors.desktop" [
+        "application/msword"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.oasis.opendocument.text"
+        "application/rtf"
+        "text/rtf"
+        "application/vnd.ms-excel"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.oasis.opendocument.spreadsheet"
+        "text/csv"
+        "application/vnd.ms-powerpoint"
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        "application/vnd.oasis.opendocument.presentation"
+      ])
+
       # Photos & Images (Gwenview)
       (associate "org.kde.gwenview.desktop" [
         "image/jpeg"

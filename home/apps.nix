@@ -20,7 +20,13 @@
     # Productivity & daily desktop applications
     resources
     unstable.discord
-    libreoffice-fresh # includes the soffice/libreoffice CLI
+    onlyoffice-desktopeditors
+    # Expose only the `soffice` CLI from LibreOffice (for headless conversions)
+    # without installing its GUI `.desktop` launchers or MIME registrations.
+    (runCommandLocal "soffice" { } ''
+      mkdir -p "$out/bin"
+      ln -s "${libreoffice-fresh}/bin/soffice" "$out/bin/soffice"
+    '')
     pandoc
     (unstable.mullvad-browser.override {
       extraPrefs = ''
