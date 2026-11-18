@@ -497,16 +497,6 @@ let
         exit 1
       fi
 
-      default_src="$(
-        printf '%s' "$outputs_json" | jq -r '
-          ([.[] | select(.enabled == true)]) as $all
-          | ($all | map(select(.name | startswith("eDP-"))) | first)
-            // ($all | map(select(.focused == true)) | first)
-            // ($all | first)
-            | .name // empty
-        '
-      )"
-
       pick_output() {
         local prompt="$1"
         local filter_out="''${2:-}"
@@ -514,8 +504,9 @@ let
         choice="$(
           printf '%s' "$outputs_json" \
             | jq -r --arg skip "$filter_out" '
-                .[]
-                | select(.enabled == true and .name != $skip)
+                [ .[] | select(.enabled == true and .name != $skip) ]
+                | sort_by((.name | startswith("eDP-")), (.focused == true), .name)
+                | .[]
                 | if (.description // "") != "" and .description != .name
                   then "\(.name) — \(.description)"
                   else .name
@@ -530,18 +521,7 @@ let
       if [ -n "$arg_dest" ]; then
         dest="$arg_dest"
       else
-        dest_count="$(
-          printf '%s' "$outputs_json" | jq --arg s "$default_src" '[.[] | select(.enabled == true and .name != $s)] | length'
-        )"
-        if [ "$dest_count" -eq 1 ]; then
-          dest="$(
-            printf '%s' "$outputs_json" | jq -r --arg s "$default_src" '
-              [.[] | select(.enabled == true and .name != $s)][0].name
-            '
-          )"
-        else
-          dest="$(pick_output "Mirror destination")" || exit 0
-        fi
+        dest="$(pick_output "Mirror destination")" || exit 0
       fi
 
       if ! printf '%s' "$outputs_json" | jq -e --arg d "$dest" '
@@ -552,31 +532,15 @@ let
       fi
 
       if [ "$mode" = "toggle" ] || [ "$mode" = "menu" ]; then
-        src_for_dest="$(
-          printf '%s' "$outputs_json" | jq -r --arg d "$dest" '
-            ([.[] | select(.enabled == true and .name != $d)]) as $cand
-            | ($cand | map(select(.name | startswith("eDP-"))) | first)
-              // ($cand | map(select(.focused == true)) | first)
-              // ($cand | first)
-              | .name // empty
-          '
-        )"
         selection="$(
           printf '%s\n' \
-            "Screen or Window (Portal Picker)" \
-            "Window Only (Portal Picker)" \
+            "Portal Picker (Screen or Window)" \
             "Rectangular Region" \
-            "Full Screen ($src_for_dest)" \
             | noctalia dmenu -p "Mirror to $dest"
         )" || exit 0
         case "$selection" in
-          "Screen or Window"*) mode="portal" ;;
-          "Window Only"*) mode="window" ;;
+          "Portal Picker"*) mode="portal" ;;
           "Rectangular Region"*) mode="region" ;;
-          "Full Screen"*)
-            mode="fullscreen"
-            arg_src="$src_for_dest"
-            ;;
           *) exit 0 ;;
         esac
       fi
