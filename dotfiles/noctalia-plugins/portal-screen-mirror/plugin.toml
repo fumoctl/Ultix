@@ -1,0 +1,61 @@
+id = "fumoctl/portal-screen-mirror"
+name = "Portal Screen Mirror"
+version = "1.0.0"
+plugin_api = 50
+author = "fumoctl"
+license = "MIT"
+icon = "screen-share"
+description = "Mirror any screen, window, or rectangular region to another display via XDG ScreenCast and layer-shell."
+tags = ["bar", "panel", "service", "shortcut", "umbriel", "utility", "video"]
+dependencies = ["python3", "slurp"]
+
+[[setting]]
+key = "show_cursor"
+type = "bool"
+label_key = "settings.show_cursor.label"
+description_key = "settings.show_cursor.description"
+default = true
+
+[[setting]]
+key = "fit"
+type = "select"
+label_key = "settings.fit.label"
+description_key = "settings.fit.description"
+default = "contain"
+options = [
+  { value = "contain", label_key = "settings.fit.contain" },
+  { value = "cover", label_key = "settings.fit.cover" },
+  { value = "stretch", label_key = "settings.fit.stretch" },
+]
+
+[[widget]]
+id = "mirror"
+entry = "widget.luau"
+
+[[panel]]
+id = "controls"
+entry = "panel.luau"
+width = 380
+height = "content"
+max_height = 520
+placement = "attached"
+position = "auto"
+open_near_click = true
+
+[[layer]]
+id = "display"
+entry = "layer.luau"
+layer = "overlay"
+anchors = ["top", "bottom", "left", "right"]
+exclusive_zone = -1
+keyboard = "none"
+click_through = true
+output = "focused"
+
+[[service]]
+id = "mirror-service"
+entry = "service.luau"
+
+[[shortcut]]
+id = "toggle"
+entry = "shortcut.luau"

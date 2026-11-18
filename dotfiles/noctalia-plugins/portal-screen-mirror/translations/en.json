@@ -1,0 +1,61 @@
+{
+  "title": "Portal Screen Mirror",
+  "settings": {
+    "show_cursor": {
+      "label": "Show cursor",
+      "description": "Embed the pointer cursor in mirrored streams."
+    },
+    "fit": {
+      "label": "Scaling mode",
+      "description": "How the captured source fits inside the destination display.",
+      "contain": "Contain (letterbox)",
+      "cover": "Cover (crop to fill)",
+      "stretch": "Stretch"
+    }
+  },
+  "widget": {
+    "ready": "Screen Mirror — Click to choose destination & source",
+    "starting": "Selecting mirror source…",
+    "stopping": "Stopping screen mirror…",
+    "running_status": "Status",
+    "running_value": "Mirroring",
+    "destination": "Destination",
+    "mode": "Source",
+    "right_click_key": "Right-click",
+    "right_click_value": "Stop mirroring",
+    "error": "Screen mirror failed"
+  },
+  "mode": {
+    "portal": "Portal (Screen / Window)",
+    "region": "Rectangular Region"
+  },
+  "shortcut": {
+    "active": "Mirroring",
+    "inactive": "Screen Mirror"
+  },
+  "panel": {
+    "destination_label": "1. Destination screen",
+    "source_label": "2. Capture source",
+    "portal_button": "Portal Picker (Screen or Window)",
+    "region_button": "Rectangular Region",
+    "stop_button": "Stop Mirroring",
+    "no_outputs_title": "Single display active",
+    "no_outputs_body": "Connect a second display (e.g. HDMI) to start mirroring.",
+    "status_ready": "Choose a destination display, then pick a source.",
+    "status_starting": "Waiting for source selection…",
+    "status_running": "Mirroring to {destination}"
+  },
+  "osd": {
+    "started": "Mirroring → {destination}",
+    "stopped": "Mirror stopped"
+  },
+  "error": {
+    "portal_unavailable": "Desktop portal is unavailable",
+    "slurp_missing": "slurp is not installed",
+    "python_missing": "python3 is not installed",
+    "no_destination": "Connect a second display first",
+    "disconnected": "Destination display disconnected",
+    "launch_failed": "Failed to launch mirror companion",
+    "stream_exited": "Mirror stream ended unexpectedly"
+  }
+}
