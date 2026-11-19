@@ -9,44 +9,19 @@
 let
   umbrielBin = lib.getExe config.programs.umbriel.package;
 
-  # Local Noctalia plugin (`fumoctl/portal-screen-mirror`): mirrors any screen,
-  # window, or rectangular region via XDG ScreenCast + `ui.pixelStream` onto
-  # a plugin-owned `zwlr-layer-shell-v1` overlay surface (no compositor
-  # window rules needed). Source stays portable in `dotfiles/` while NixOS
-  # wraps `companion.py` with GI typelibs, GStreamer plugins, and `slurp`.
-  screenMirrorPlugin =
-    let
-      pyEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
-      typelibPath = lib.makeSearchPath "lib/girepository-1.0" [
-        pkgs.glib.out
-        pkgs.gst_all_1.gstreamer.out
-      ];
-      gstPluginPath = lib.makeSearchPath "lib/gstreamer-1.0" [
-        pkgs.pipewire
-        pkgs.gst_all_1.gstreamer.out
-        pkgs.gst_all_1.gst-plugins-base
-        pkgs.gst_all_1.gst-plugins-good
-      ];
-    in
-    pkgs.runCommandLocal "noctalia-plugin-portal-screen-mirror"
-      {
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-      }
-      ''
-        cp -rT ${../dotfiles/noctalia-plugins/portal-screen-mirror} "$out"
-        chmod -R u+w "$out"
-        substituteInPlace "$out/companion.py" \
-          --replace-fail "#!/usr/bin/env python3" "#!${pyEnv}/bin/python3"
-        chmod +x "$out/companion.py"
-        ${pyEnv}/bin/python3 -m py_compile "$out/companion.py"
-        rm -rf "$out/__pycache__"
-        wrapProgram "$out/companion.py" \
-          --set GI_TYPELIB_PATH "${typelibPath}" \
-          --set GST_PLUGIN_SYSTEM_PATH_1_0 "${gstPluginPath}" \
-          --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ pkgs.wayland ]}" \
-          --prefix PATH : "${lib.makeBinPath [ pkgs.slurp ]}"
-        ${lib.getExe config.programs.noctalia.package} plugins lint "$out"
-      '';
+  # Runtime Python + GI/GStreamer search paths for `fumoctl/portal-screen-mirror`
+  # (pulled natively by Noctalia via `programs.noctalia.settings.plugins.source`).
+  screenMirrorPyEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+  screenMirrorTypelibPath = lib.makeSearchPath "lib/girepository-1.0" [
+    pkgs.glib.out
+    pkgs.gst_all_1.gstreamer.out
+  ];
+  screenMirrorGstPluginPath = lib.makeSearchPath "lib/gstreamer-1.0" [
+    pkgs.pipewire
+    pkgs.gst_all_1.gstreamer.out
+    pkgs.gst_all_1.gst-plugins-base
+    pkgs.gst_all_1.gst-plugins-good
+  ];
 
   # Layout-aware Mod+Wheel helper: scrolls across windows/columns when the
   # focused workspace uses `scrolling`, and switches workspaces otherwise.
@@ -82,6 +57,8 @@ in
     adw-gtk3
     glib
     kdePackages.qt6ct
+    screenMirrorPyEnv
+    slurp
   ];
 
   # GTK theming: use adw-gtk3-dark (matches theme.mode = "dark") so Noctalia's
@@ -148,15 +125,38 @@ in
     "Pictures/Wallpapers".source = ../dotfiles/Wallpapers;
   };
 
-  xdg.dataFile."noctalia/plugins/portal-screen-mirror".source = screenMirrorPlugin;
-  systemd.user.services.noctalia.Unit.X-Restart-Triggers = [ "${screenMirrorPlugin}" ];
+  systemd.user.services.noctalia.Service.Environment = [
+    "GI_TYPELIB_PATH=${screenMirrorTypelibPath}"
+    "GST_PLUGIN_SYSTEM_PATH_1_0=${screenMirrorGstPluginPath}"
+    "LD_LIBRARY_PATH=${lib.makeLibraryPath [ pkgs.wayland ]}"
+  ];
 
   # --- Noctalia Shell ---
   programs.noctalia = {
     enable = true;
     systemd.enable = true;
     settings = {
-      plugins.enabled = [ "fumoctl/portal-screen-mirror" ];
+      plugins = {
+        auto_update = "all";
+        enabled = [ "fumoctl/portal-screen-mirror" ];
+        source = [
+          {
+            name = "official";
+            kind = "git";
+            location = "https://github.com/noctalia-dev/official-plugins";
+          }
+          {
+            name = "community";
+            kind = "git";
+            location = "https://github.com/noctalia-dev/community-plugins";
+          }
+          {
+            name = "fumoctl";
+            kind = "git";
+            location = "https://github.com/fumoctl/noctalia-plugins";
+          }
+        ];
+      };
 
       shell = {
         avatar_path = "${config.home.homeDirectory}/.fumoctl.jpg";
