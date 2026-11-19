@@ -136,6 +136,7 @@
         ".local/share/nix"
         ".local/share/uv"
         ".local/state/noctalia"
+        ".local/state/portal-screen-mirror"
         ".local/state/wireplumber"
         ".local/bin"
 

@@ -9,20 +9,6 @@
 let
   umbrielBin = lib.getExe config.programs.umbriel.package;
 
-  # Runtime Python + GI/GStreamer search paths for `fumoctl/portal-screen-mirror`
-  # (pulled natively by Noctalia via `programs.noctalia.settings.plugins.source`).
-  screenMirrorPyEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
-  screenMirrorTypelibPath = lib.makeSearchPath "lib/girepository-1.0" [
-    pkgs.glib.out
-    pkgs.gst_all_1.gstreamer.out
-  ];
-  screenMirrorGstPluginPath = lib.makeSearchPath "lib/gstreamer-1.0" [
-    pkgs.pipewire
-    pkgs.gst_all_1.gstreamer.out
-    pkgs.gst_all_1.gst-plugins-base
-    pkgs.gst_all_1.gst-plugins-good
-  ];
-
   # Layout-aware Mod+Wheel helper: scrolls across windows/columns when the
   # focused workspace uses `scrolling`, and switches workspaces otherwise.
   umbrielWheelScroll = pkgs.writeShellScriptBin "scroll" ''
@@ -45,8 +31,11 @@ in
 {
   imports = [
     inputs.noctalia.homeModules.default
+    inputs.portal-screen-mirror.homeManagerModules.default
     inputs.umbriel.homeModules.default
   ];
+
+  programs.portal-screen-mirror.enable = true;
 
   # Runtime deps for Noctalia's theming hooks:
   # - adw-gtk3: the GTK theme the template's apply.sh looks up and syncs
@@ -57,8 +46,6 @@ in
     adw-gtk3
     glib
     kdePackages.qt6ct
-    screenMirrorPyEnv
-    slurp
   ];
 
   # GTK theming: use adw-gtk3-dark (matches theme.mode = "dark") so Noctalia's
@@ -124,12 +111,6 @@ in
     ".fumoctl.jpg".source = ../dotfiles/.fumoctl.jpg;
     "Pictures/Wallpapers".source = ../dotfiles/Wallpapers;
   };
-
-  systemd.user.services.noctalia.Service.Environment = [
-    "GI_TYPELIB_PATH=${screenMirrorTypelibPath}"
-    "GST_PLUGIN_SYSTEM_PATH_1_0=${screenMirrorGstPluginPath}"
-    "LD_LIBRARY_PATH=${lib.makeLibraryPath [ pkgs.wayland ]}"
-  ];
 
   # --- Noctalia Shell ---
   programs.noctalia = {
