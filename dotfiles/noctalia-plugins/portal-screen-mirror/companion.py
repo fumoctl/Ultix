@@ -1278,9 +1278,14 @@ def main() -> int:
             # modifier mismatches, stamp `pixel-aspect-ratio=1/1` via `capssetter` (since
             # `pipewiresrc` omits PAR, which otherwise overflows `videoscale` size fixation),
             # and output packed RGBA8 bounded to destination resolution for PixelStream.
+            # Keep `on-disconnect=none` AND disable `do-timestamp`/`provide-clock`/`use-bufferpool`:
+            # during animated tiled-window resizes, PipeWire repeatedly removes old buffers and
+            # pushes `FLUSH_STOP(reset_time=TRUE)`; leaving `do-timestamp=true` or `provide-clock=true`
+            # accumulates running-time skew across flushes and stalls buffer return by seconds.
             pipeline = Gst.parse_launch(
-                "pipewiresrc name=src always-copy=true do-timestamp=true keepalive-time=100 resend-last=true "
+                "pipewiresrc name=src always-copy=true do-timestamp=false use-bufferpool=false provide-clock=false "
                 "! video/x-raw,format={BGRx,BGRA,RGBx,RGBA} "
+                "! queue max-size-buffers=1 leaky=downstream "
                 "! videocrop name=crop "
                 "! capssetter join=true replace=false caps=\"video/x-raw,pixel-aspect-ratio=1/1\" "
                 "! videoconvert ! video/x-raw,format=RGBx,pixel-aspect-ratio=1/1 "
@@ -1291,8 +1296,6 @@ def main() -> int:
             src_elem = pipeline.get_by_name("src")
             src_elem.set_property("fd", pw_fd)
             src_elem.set_property("path", str(node_id))
-            if src_elem.find_property("on-disconnect") is not None:
-                Gst.util_set_object_arg(src_elem, "on-disconnect", "eos")
 
             if crop_fractions is not None:
                 fx0, fy0, fx1, fy1 = crop_fractions
