@@ -623,11 +623,11 @@
         "nixpkgs": "nixpkgs_10"
       },
       "locked": {
-        "lastModified": 1795120839,
-        "narHash": "sha256-ZgqWwZyH7+iHl+Uw69mcYjD/n7GRMX2gloKs23TSvh8=",
+        "lastModified": 1795126917,
+        "narHash": "sha256-aW1XkS7b4/hjgepjC6Go0LH1OfZfLfpfOrtYhprNi/g=",
         "owner": "fumoctl",
         "repo": "portal-screen-mirror",
-        "rev": "7515f9a075c0494ec74121f046b36e1ee7fea884",
+        "rev": "45c12a290d82366244e9e0bc71c9b6c9ba68dbe6",
         "type": "github"
       },
       "original": {
