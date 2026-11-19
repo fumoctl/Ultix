@@ -9,6 +9,20 @@ Mirror any screen, individual window, or rectangular region onto another display
 | ID | `fumoctl/portal-screen-mirror` |
 | Entries | Bar widget: `mirror`; panel: `controls`; layer: `display`; service: `mirror-service`; shortcut: `toggle` |
 
+## Compatibility
+
+`fumoctl/portal-screen-mirror` is compositor-agnostic across Wayland desktops where Noctalia runs, with zero compositor-specific CLI or IPC calls.
+
+| Component | Protocol / API Used | Compositor Support |
+| :--- | :--- | :--- |
+| **Output discovery & UI** | `noctalia.outputs()` (`wl_output` + `xdg-output`) | Any compositor running Noctalia |
+| **Mirror display surface** | `zwlr-layer-shell-v1` (`[[layer]]` + `ui.pixelStream`) | Any layer-shell compositor (Umbriel, Hyprland, Niri, Sway, MangoWC, Labwc, River, KDE KWin — i.e., everywhere Noctalia runs; GNOME Mutter lacks `zwlr-layer-shell-v1`) |
+| **Portal Picker mode** | `org.freedesktop.portal.ScreenCast` (`types = 3`) + PipeWire SHM (`MemFd`) | **Full screen + individual windows** on Umbriel (`xdg-desktop-portal-umbriel`), Hyprland (`xdg-desktop-portal-hyprland`), Niri (`xdg-desktop-portal-gnome`), and KDE (`xdg-desktop-portal-kde`). **Full screen only** on Sway, Labwc, and River using `xdg-desktop-portal-wlr` (since `xdg-desktop-portal-wlr` implements monitor capture only, not per-window capture). |
+| **Rectangular Region mode** | `slurp` + `zwlr_screencopy_manager_v1`, with automatic `ScreenCast` + `videocrop` fallback | **Instant (no portal prompt)** on compositors implementing `wlr-screencopy` (Umbriel, Hyprland, Niri, Sway, River, Labwc, MangoWC). **Automatic portal fallback** (prompts once per monitor and caches `restore_token`) on compositors without `wlr-screencopy` (such as KDE KWin). |
+
+- **No compositor window rules required**: Frames render into a plugin-owned `zwlr-layer-shell-v1` `overlay` surface configured dynamically on the target connector (`noctalia.layer.configure`), so mirroring works reliably even on compositors that ignore `xdg_toplevel.set_fullscreen` target output hints (such as Umbriel).
+- **PipeWire pixel formats**: Negotiates `{BGRx, BGRA, RGBx, RGBA}` system-memory (`MemFd`) buffers, which every major `ScreenCast` portal backend (`-umbriel`, `-hyprland`, `-wlr`, `-gnome`, `-kde`) advertises as its standard 8-bit SHM fallback.
+
 ## Requirements
 
 - `python3` with `PyGObject` (`gi`) and GStreamer 1.0 (`gstreamer`, `gst-plugins-base`, `gst-plugins-good`, and the PipeWire GStreamer plugin `libgstpipewire`)
@@ -57,7 +71,6 @@ noctalia msg plugin fumoctl/portal-screen-mirror:mirror-service all stop
 
 ## Notes
 
-- **Compositor compatibility**: Because frames render into a plugin-owned `zwlr-layer-shell-v1` `overlay` surface configured dynamically on the target connector (`noctalia.layer.configure`), mirroring works even on compositors that ignore `xdg_toplevel.set_fullscreen` target output hints (such as Umbriel). On wlroots compositors implementing `zwlr_screencopy_manager_v1`, **Rectangular Region** mode captures the `slurp` box directly without opening a second portal picker dialog (falling back to XDG `ScreenCast` + `videocrop` elsewhere).
 - **Processes spawned**: `service.luau` launches bundled `companion.py`, which invokes `slurp` only when **Rectangular Region** mode is selected.
 - **Filesystem writes**: Writes transient session coordination files (`mirror.run` and `stream.sock`) and per-output portal restore tokens (`restore_tokens.json`, mode `0600`) solely inside `noctalia.pluginDataDir()`.
-- **Network**: Makes zero network requests; all communication stays local over session D-Bus, PipeWire, and an owner-only (`0600`) Unix `SOCK_SEQPACKET` socket.
+- **Network**: Makes zero network requests; all communication stays local over session D-Bus, Wayland, PipeWire, and an owner-only (`0600`) Unix `SOCK_SEQPACKET` socket.

@@ -6,7 +6,7 @@ author = "fumoctl"
 license = "MIT"
 icon = "screen-share"
 description = "Mirror any screen, window, or rectangular region to another display via XDG ScreenCast and layer-shell."
-tags = ["bar", "panel", "service", "shortcut", "umbriel", "utility", "video"]
+tags = ["bar", "desktop", "panel", "service", "shortcut", "utility", "video"]
 dependencies = ["python3", "slurp"]
 
 [[setting]]
