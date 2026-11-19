@@ -851,8 +851,8 @@ in
           compat_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d"
           mkdir -p "$compat_dir"
           for pair in \
-            "Proton-CachyOS:${pkgs.proton-cachyos}" \
-            "Proton-GE:${pkgs.proton-ge-custom}" \
+            "Proton-CachyOS:${pkgs.proton-cachyos-bin_edge}" \
+            "Proton-GE:${pkgs.proton-ge-bin_edge}" \
             "GE-Proton9-12:${proton-ge-9-12}"; do
             name="''${pair%%:*}"
             src="''${pair#*:}"
