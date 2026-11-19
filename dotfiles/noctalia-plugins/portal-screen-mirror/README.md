@@ -27,7 +27,72 @@ Mirror any screen, individual window, or rectangular region onto another display
 
 - `python3` with `PyGObject` (`gi`) and GStreamer 1.0 (`gstreamer`, `gst-plugins-base`, `gst-plugins-good`, and the PipeWire GStreamer plugin `libgstpipewire`)
 - `slurp` on `PATH` for rectangular region selection
+- `libwayland-client` (`libwayland-client.so.0`) for native `zwlr_screencopy_manager_v1` region capture
 - `xdg-desktop-portal` with an active `org.freedesktop.portal.ScreenCast` backend (such as `xdg-desktop-portal-umbriel`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-wlr`, `xdg-desktop-portal-gnome`, or `xdg-desktop-portal-kde`) and `pipewire`
+
+### Packages by Distribution
+
+Also install your compositor's `ScreenCast` portal backend (`xdg-desktop-portal-umbriel`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gnome`, `xdg-desktop-portal-kde`, or `xdg-desktop-portal-wlr`) if it is not already enabled.
+
+**Arch Linux / CachyOS / EndeavourOS**
+
+```sh
+sudo pacman -S python python-gobject gstreamer gst-plugins-base gst-plugins-good gst-plugin-pipewire slurp wayland pipewire xdg-desktop-portal
+```
+
+**Fedora**
+
+```sh
+sudo dnf install python3 python3-gobject gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good pipewire-gstreamer slurp wayland-libs-client pipewire xdg-desktop-portal
+```
+
+**Debian / Ubuntu / Pop!_OS**
+
+```sh
+sudo apt install python3 python3-gi gir1.2-gstreamer-1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-pipewire slurp libwayland-client0 pipewire xdg-desktop-portal
+```
+
+**openSUSE Tumbleweed / Slowroll**
+
+```sh
+sudo zypper install python3 python3-gobject typelib-1_0-Gst-1_0 gstreamer gstreamer-plugins-base gstreamer-plugins-good gstreamer-plugin-pipewire slurp libwayland-client0 pipewire xdg-desktop-portal
+```
+
+**Void Linux**
+
+```sh
+sudo xbps-install -S python3 python3-gobject gstreamer1 gst-plugins-base1 gst-plugins-good1 gstreamer1-pipewire slurp wayland pipewire xdg-desktop-portal
+```
+
+**NixOS (Home Manager)**
+
+On NixOS, GObject Introspection typelibs, GStreamer plugins, and `libwayland-client.so.0` live in isolated `/nix/store` paths, so expose them to `noctalia.service`:
+
+```nix
+{ lib, pkgs, ... }:
+let
+  pyEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+  typelibPath = lib.makeSearchPath "lib/girepository-1.0" [
+    pkgs.glib.out
+    pkgs.gst_all_1.gstreamer.out
+  ];
+  gstPluginPath = lib.makeSearchPath "lib/gstreamer-1.0" [
+    pkgs.pipewire
+    pkgs.gst_all_1.gstreamer.out
+    pkgs.gst_all_1.gst-plugins-base
+    pkgs.gst_all_1.gst-plugins-good
+  ];
+in
+{
+  home.packages = [ pyEnv pkgs.slurp ];
+
+  systemd.user.services.noctalia.Service.Environment = [
+    "GI_TYPELIB_PATH=${typelibPath}"
+    "GST_PLUGIN_SYSTEM_PATH_1_0=${gstPluginPath}"
+    "LD_LIBRARY_PATH=${lib.makeLibraryPath [ pkgs.wayland ]}"
+  ];
+}
+```
 
 ## Usage
 
