@@ -43,6 +43,7 @@
       libglvnd
       vulkan-loader
       mesa
+      libgbm
       libdrm
       libva
       pciutils
@@ -111,6 +112,7 @@
     # Development & Nix tooling
     nixd
     nixfmt
+    npins
     inputs.nix-alien.packages.${pkgs.stdenv.hostPlatform.system}.nix-alien
     neovim
     git

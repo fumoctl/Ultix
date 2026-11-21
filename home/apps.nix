@@ -49,13 +49,164 @@
     mutableExtensionsDir = true;
   };
 
-  # Antigravity global skills
-  # Drop skill folders (each with a SKILL.md) into `dotfiles/skills/` and they are
-  # symlinked individually into `~/.gemini/config/skills/`.
-  home.file.".gemini/config/skills" = {
-    source = ../dotfiles/skills;
-    recursive = true;
-  };
+  # Antigravity global skills & portable npins-backed plugins.
+  # - Drop hand-written skill folders (with SKILL.md) into `dotfiles/skills/`.
+  # - Add/update/remove external GitHub skill or plugin repos with `npins`:
+  #     `npins add github <owner> <repo>` | `npins update` | `npins remove <name>`
+  #   Each pin in `npins/sources.json` is converted automatically into a validated
+  #   Antigravity plugin (`skills/*/SKILL.md`, root `SKILL.md`, or `commands/*.{md,toml}`)
+  #   under `~/.gemini/config/plugins/<name>/` while leaving `plugins/` writable.
+  home.file =
+    let
+      antigravityPlugins = (import ../npins) { };
+      buildAntigravityPlugin = pkgs.writeText "build-antigravity-plugin.py" ''
+        import json
+        import os
+        import re
+        import shutil
+        import sys
+        import tomllib
+        from pathlib import Path
+
+        plugin_name = sys.argv[1]
+        src = Path(sys.argv[2])
+        out = Path(sys.argv[3])
+        pin_version = sys.argv[4]
+
+        out_skills = out / "skills"
+        out_skills.mkdir(parents=True, exist_ok=True)
+
+        # 1. Standard skills directories (skills/ takes precedence over .agents/skills/)
+        for base in (src / "skills", src / ".agents" / "skills"):
+            if not base.is_dir():
+                continue
+            for entry in sorted(base.iterdir()):
+                if entry.is_dir() and (entry / "SKILL.md").is_file():
+                    dst = out_skills / entry.name
+                    if not dst.exists():
+                        shutil.copytree(entry, dst, copy_function=shutil.copyfile)
+
+        # 2. Single-skill repository (root SKILL.md)
+        if (src / "SKILL.md").is_file() and not (out_skills / plugin_name).exists():
+            dst = out_skills / plugin_name
+            dst.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src / "SKILL.md", dst / "SKILL.md")
+            for sub in ("scripts", "examples", "resources", "references"):
+                if (src / sub).is_dir():
+                    shutil.copytree(src / sub, dst / sub, copy_function=shutil.copyfile)
+
+        # 3. Fallback: convert commands/*.md and commands/*.toml into skills/<cmd>/SKILL.md
+        commands_dir = src / "commands"
+        if commands_dir.is_dir():
+            for path in sorted(commands_dir.iterdir()):
+                if not path.is_file() or path.suffix not in (".md", ".toml"):
+                    continue
+                cmd = path.stem.lower()
+                dst = out_skills / cmd
+                if dst.exists():
+                    continue
+                default_desc = f"Slash command /{cmd} from {plugin_name}"
+                text = path.read_text(encoding="utf-8-sig")
+                if path.suffix == ".md":
+                    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n(.*)$", text, re.DOTALL)
+                    if m:
+                        fm, body = m.group(1), m.group(2)
+                        lines = [fm.rstrip()]
+                        if not re.search(r"(?m)^name\s*:", fm):
+                            lines.append(f"name: {json.dumps(cmd)}")
+                        if not re.search(r"(?m)^description\s*:", fm):
+                            lines.append(f"description: {json.dumps(default_desc)}")
+                        skill_md = "---\n" + "\n".join(lines) + "\n---\n" + body.lstrip("\r\n")
+                    else:
+                        skill_md = (
+                            f"---\nname: {json.dumps(cmd)}\ndescription: {json.dumps(default_desc)}\n---\n\n"
+                            + text.lstrip()
+                        )
+                else:
+                    data = tomllib.loads(text)
+                    prompt = data.get("prompt")
+                    if not isinstance(prompt, str) or not prompt.strip():
+                        continue
+                    raw_desc = data.get("description")
+                    desc = raw_desc.strip() if isinstance(raw_desc, str) and raw_desc.strip() else default_desc
+                    skill_md = (
+                        f"---\nname: {json.dumps(cmd)}\ndescription: {json.dumps(desc)}\n---\n\n"
+                        + prompt.lstrip()
+                    )
+                dst.mkdir(parents=True, exist_ok=True)
+                (dst / "SKILL.md").write_text(skill_md, encoding="utf-8")
+
+        if not list(out_skills.glob("*/SKILL.md")):
+            raise SystemExit(f"antigravity plugin '{plugin_name}' produced no skills")
+
+        # 4. Synthesize clean plugin.json metadata from upstream manifests
+        meta = {"name": plugin_name}
+        manifest_paths = (
+            src / "plugin.json",
+            src / ".antigravity-plugin" / "plugin.json",
+            src / ".gemini-plugin" / "plugin.json",
+            src / ".claude-plugin" / "plugin.json",
+            src / "gemini-extension.json",
+            src / "package.json",
+        )
+        parsed = []
+        for p in manifest_paths:
+            if p.is_file():
+                try:
+                    obj = json.loads(p.read_text(encoding="utf-8"))
+                    if isinstance(obj, dict):
+                        parsed.append(obj)
+                except Exception:
+                    pass
+
+        for key in ("description", "displayName"):
+            for obj in parsed:
+                val = obj.get(key)
+                if isinstance(val, str) and val.strip():
+                    meta[key] = val.strip()
+                    break
+
+        for obj in parsed:
+            hp = obj.get("homepage")
+            if isinstance(hp, str) and hp.strip().startswith("https://"):
+                meta["homepage"] = hp.strip()
+                break
+
+        version = ""
+        for obj in parsed:
+            ver = obj.get("version")
+            if isinstance(ver, str) and ver.strip():
+                version = ver.strip().lstrip("v")
+                break
+        if not version and pin_version.strip():
+            version = pin_version.strip().lstrip("v")
+        meta["version"] = version or "0.0.0"
+
+        (out / "plugin.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+      '';
+      mkAntigravityPlugin =
+        name: pin:
+        let
+          src = (pin { inherit pkgs; }).outPath;
+          pinVersion = pin.version or "";
+        in
+        pkgs.runCommandLocal "antigravity-plugin-${name}" { } ''
+          ${lib.getExe pkgs.python3} ${buildAntigravityPlugin} ${lib.escapeShellArg name} ${src} "$out" ${lib.escapeShellArg pinVersion}
+        '';
+    in
+    {
+      ".gemini/config/skills" = {
+        source = ../dotfiles/skills;
+        recursive = true;
+      };
+    }
+    // lib.mapAttrs' (
+      name: pin:
+      lib.nameValuePair ".gemini/config/plugins/${name}" {
+        source = mkAntigravityPlugin name pin;
+        recursive = true;
+      }
+    ) antigravityPlugins;
 
   # Merge declarative Nix-backed MCP servers into `~/.gemini/config/mcp_config.json`
   # as a regular 0600 file rather than a read-only HM symlink: `.gemini` is persisted
@@ -64,10 +215,24 @@
   # `mcp_config.json.backup` already exists.
   home.activation.antigravityMcpConfig =
     let
+      # Run npm MCP servers via Bun's `bunx` with a 7-day release cooldown (604800s)
+      # to guard against newly published supply-chain compromises.
+      # and `pkgs.nodejs` on PATH so `#!/usr/bin/env node` bins execute on Node.
+      bunxMcp = pkgs.writeShellApplication {
+        name = "bunx-mcp";
+        runtimeInputs = [
+          pkgs.unstable.bun
+          pkgs.nodejs
+        ];
+        text = ''
+          exec bunx --silent --ignore-scripts --minimum-release-age 604800 "$@"
+        '';
+      };
       declarativeMcp = (pkgs.formats.json { }).generate "antigravity-mcp.json" {
         mcpServers = {
           context7 = {
-            command = lib.getExe pkgs.unstable.context7-mcp;
+            command = lib.getExe bunxMcp;
+            args = [ "@upstash/context7-mcp@latest" ];
           };
           dbcode = {
             command = lib.getExe pkgs.bash;
@@ -77,10 +242,18 @@
             ];
           };
           playwright = {
-            command = lib.getExe pkgs.unstable.playwright-mcp;
+            command = lib.getExe bunxMcp;
             args = [
+              "@playwright/mcp@latest"
               "--browser"
               "chromium"
+            ];
+          };
+          rea = {
+            command = lib.getExe bunxMcp;
+            args = [
+              "rea-agents@latest"
+              "--mcp"
             ];
           };
           rivalsearch = {

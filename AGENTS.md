@@ -12,6 +12,7 @@ Ultix is a modular, declarative **NixOS (`nixos-26.05`) flake** for two `x86_64-
 Ultix/
 ├── flake.nix                       # Inputs, binary caches, `mkHost` → nixosConfigurations.<host>
 ├── flake.lock                      # Locked input revisions (commit alongside flake.nix changes)
+├── npins/                          # `sources.json` + `default.nix`: pinned external Antigravity skill/plugin repos
 ├── .sops.yaml                      # Post-quantum Age recipient rules for SOPS
 ├── secrets/secrets.yaml            # SOPS-encrypted user/API/SSH/PGP secrets
 ├── hosts/
@@ -29,7 +30,7 @@ Ultix/
 │   ├── secrets.nix                 # `sops-nix` HM module, secret declarations, shell env template, PGP import unit
 │   ├── noctalia.nix                # Pure-Nix `programs.{noctalia,umbriel}.settings`, GTK/Qt/cursor integration
 │   ├── shell.nix                   # Interactive shell, Git signing, `0600` SSH config copy, terminal profile
-│   ├── apps.nix                    # User GUI/dev packages & mutable JSON config merge hooks
+│   ├── apps.nix                    # User GUI/dev packages, Antigravity MCP merge hook & `npins`-backed plugins
 │   ├── flatpak.nix                 # Declarative `nix-flatpak` remotes/apps, update timer, sandbox `overrides`
 │   └── mime.nix                    # `xdg.mimeApps` associations + KSycoca cache rebuild hook
 └── dotfiles/                       # Static assets (avatar, wallpapers, fastfetch config, agent skills)
@@ -146,7 +147,33 @@ Ultix/
 
 ---
 
-## 8. Conventions & Placement Guide
+## 8. Antigravity MCP Servers & Skills (`home/apps.nix` + `npins/`)
+
+### MCP Servers (`home/apps.nix` → `~/.gemini/config/mcp_config.json`)
+- **Non-destructive `jq` merge**: `home.activation.antigravityMcpConfig` merges `declarativeMcp.mcpServers` into a regular `0600` `~/.gemini/config/mcp_config.json` and records Nix-managed server names in `~/.gemini/config/.nix-managed-mcp.json`. Servers added directly in the Antigravity UI/OAuth flow are preserved across rebuilds, while servers removed from `declarativeMcp` are pruned cleanly.
+- **`bunxMcp` wrapper for `@latest` npm MCPs**: Runs `bunx --silent --ignore-scripts --minimum-release-age 604800 "$@"` (7-day release cooldown against supply-chain compromises).
+  - **Must use `pkgs.unstable.bun` (`>= 1.4.4`)**: `bunx --minimum-release-age` is enforced in Bun `1.4.4+`; stable `pkgs.bun` (`1.3.13`) treats it as a silent no-op.
+  - **Must keep `pkgs.nodejs` in `runtimeInputs`**: `nodejs` is not on the global `PATH`, and npm MCP bin scripts use `#!/usr/bin/env node`.
+  - **Must keep `--silent` and omit `--` before `"$@"`**: `--silent` keeps `bunx` install logs off stdout (which would corrupt MCP JSON-RPC), and `bunx` stops parsing its own flags at the first `<pkg>@<version>` positional argument so downstream flags like `--browser chromium` or `--mcp` pass through.
+- **Playwright browser runtime**: `@playwright/mcp@latest` caches its downloaded Chromium build under `~/.cache/ms-playwright` (persisted in `hosts/impermanence.nix`) and relies on `libgbm` (`pkgs.libgbm`) in `programs.nix-ld.libraries` (`hosts/packages.nix`) alongside the rest of the graphics/GTK/NSS stack.
+- **Non-npm MCPs**: `dbcode` launches the highest-versioned VSCodium DBCode extension CLI from `~/.vscode-oss/extensions/` using `pkgs.nodejs` (updated via VSCodium); remote Streamable HTTP entries (`rivalsearch`) update server-side.
+
+### Skills & External Plugins (`dotfiles/skills/` + `npins/`)
+- **Hand-written local skills**: Drop `<name>/SKILL.md` directories in `dotfiles/skills/` (run `git add -N` on new files). `home.file.".gemini/config/skills"` links them with `recursive = true`, leaving `~/.gemini/config/skills/` writable. Do **not** place non-skill directories (such as `npins/`) inside `dotfiles/skills/`.
+- **External GitHub skill/plugin repos via `npins/`**:
+  - Pinned in root `npins/sources.json` (keeping `flake.nix` clean). `home/apps.nix` imports `(import ../npins) { }` (calling `{ }` strips `npins`'s outer `__functor`) and fetches each pin at build time via `pin { inherit pkgs; }` so pure and `--offline` flake evaluations work.
+  - `mkAntigravityPlugin` / `build-antigravity-plugin.py` automatically converts each pin into `~/.gemini/config/plugins/<name>/` (`recursive = true`, leaving `plugins/` writable for UI/Marketplace installs): discovers `skills/*/SKILL.md` and `.agents/skills/*/SKILL.md`, handles single-skill root `SKILL.md` repos (with `scripts/`, `examples/`, `resources/`, `references/`), converts Claude Code (`commands/*.md`) and Gemini CLI (`commands/*.toml`) commands into `skills/<cmd>/SKILL.md` as a fallback, synthesizes a valid `plugin.json` (including `version`), and fails the build if zero skills are found. Every skill exposes `/<skill-name>` natively in Antigravity.
+
+### Common MCP & Skill Workflows
+- **Add or edit an MCP server**: Edit `declarativeMcp.mcpServers` in `home/apps.nix` (use `command = lib.getExe bunxMcp;` and `<pkg>@latest` in `args` for npm servers) → `nh os switch` → reload/restart Antigravity.
+- **Add an external skill/plugin repo** (no `.nix` edits needed): `npins add github <owner> <repo>` (pass `--branch main` for repos without GitHub Releases) → `nh os switch`.
+- **Update external skills**: `npins update` (or `npins update <name>`) → `nh os switch`.
+- **Remove an external skill repo**: `npins remove <name>` → `nh os switch`.
+- **Validate a plugin**: `agy plugin validate --strict ~/.gemini/config/plugins/<name>` (or against its built `/nix/store/...-antigravity-plugin-<name>` derivation).
+
+---
+
+## 9. Conventions & Placement Guide
 
 ### Where Changes Go
 
@@ -157,6 +184,7 @@ Ultix/
 | Persisted system or `$HOME` state | `hosts/impermanence.nix` |
 | Compositor, bar, lockscreen, GTK/Qt/cursor theming | `hosts/desktop-env.nix` (system/greeter/portals) & `home/noctalia.nix` (HM) |
 | System CLI / admin / `nix-ld` libraries | `hosts/packages.nix` |
+| Antigravity MCP servers & skills/plugins | `home/apps.nix`, `dotfiles/skills/`, `npins/sources.json` |
 | User GUI/dev apps, shell/Git/SSH, Flatpaks, MIME | `home/apps.nix`, `home/shell.nix`, `home/flatpak.nix`, `home/mime.nix` |
 | OCI containers | `hosts/containers.nix` (shared) or `hosts/{desktop,laptop}/containers.nix` |
 | SOPS secrets & env templates | `secrets/secrets.yaml` + `home/secrets.nix` |
@@ -167,11 +195,11 @@ Ultix/
 - **Preserve "why" comments**: Keep architectural inline comments (portal fallback, keyring SSH exclusion, Umbriel session startup, Docker/Podman socket split, KConfig symlinks, Proton directory materialization) intact when editing nearby code.
 - **State versions**: Keep `system.stateVersion = "26.05"` and `home.stateVersion = "26.05"` untouched.
 - **Untracked files in flakes**: Always run `git add -N <path>` on newly created files before evaluating or building the flake, or Nix will ignore them.
-- **Commits**: Keep commit messages short, lowercase, and informal (matching `git log`); do not use Conventional Commit prefixes or add AI/co-author trailers unless asked. Commit `flake.lock` whenever `flake.nix` inputs change.
+- **Commits**: Keep commit messages short, lowercase, and informal (matching `git log`); do not use Conventional Commit prefixes or add AI/co-author trailers unless asked. Commit `flake.lock` whenever `flake.nix` inputs change, and commit `npins/sources.json` when pinned skills/plugins change.
 
 ---
 
-## 9. Verification Checklist
+## 10. Verification Checklist
 
 Never claim a configuration change works without evaluating both hosts:
 
