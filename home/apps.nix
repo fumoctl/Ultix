@@ -76,6 +76,10 @@
         out_skills = out / "skills"
         out_skills.mkdir(parents=True, exist_ok=True)
 
+        def copy_writable(src_file, dst_file):
+            shutil.copyfile(src_file, dst_file)
+            os.chmod(dst_file, 0o755 if os.access(src_file, os.X_OK) else 0o644)
+
         # 1. Standard skills directories (skills/ takes precedence over .agents/skills/)
         for base in (src / "skills", src / ".agents" / "skills"):
             if not base.is_dir():
@@ -84,16 +88,16 @@
                 if entry.is_dir() and (entry / "SKILL.md").is_file():
                     dst = out_skills / entry.name
                     if not dst.exists():
-                        shutil.copytree(entry, dst, copy_function=shutil.copyfile)
+                        shutil.copytree(entry, dst, copy_function=copy_writable)
 
         # 2. Single-skill repository (root SKILL.md)
         if (src / "SKILL.md").is_file() and not (out_skills / plugin_name).exists():
             dst = out_skills / plugin_name
             dst.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(src / "SKILL.md", dst / "SKILL.md")
+            copy_writable(src / "SKILL.md", dst / "SKILL.md")
             for sub in ("scripts", "examples", "resources", "references"):
                 if (src / sub).is_dir():
-                    shutil.copytree(src / sub, dst / sub, copy_function=shutil.copyfile)
+                    shutil.copytree(src / sub, dst / sub, copy_function=copy_writable)
 
         # 3. Fallback: convert commands/*.md and commands/*.toml into skills/<cmd>/SKILL.md
         commands_dir = src / "commands"
@@ -108,10 +112,10 @@
                 default_desc = f"Slash command /{cmd} from {plugin_name}"
                 text = path.read_text(encoding="utf-8-sig")
                 if path.suffix == ".md":
-                    m = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n(.*)$", text, re.DOTALL)
+                    m = re.match(r"^---\r?\n(?:(.*?)\r?\n)?---[ \t]*(?:\r?\n(.*))?$", text, re.DOTALL)
                     if m:
-                        fm, body = m.group(1), m.group(2)
-                        lines = [fm.rstrip()]
+                        fm, body = m.group(1) or "", m.group(2) or ""
+                        lines = [fm.rstrip()] if fm.strip() else []
                         if not re.search(r"(?m)^name\s*:", fm):
                             lines.append(f"name: {json.dumps(cmd)}")
                         if not re.search(r"(?m)^description\s*:", fm):
@@ -190,10 +194,14 @@
           src = (pin { inherit pkgs; }).outPath;
           pinVersion = pin.version or "";
         in
-        pkgs.runCommandLocal "antigravity-plugin-${name}" { } ''
-          ${lib.getExe pkgs.python3} ${buildAntigravityPlugin} ${lib.escapeShellArg name} ${src} "$out" ${lib.escapeShellArg pinVersion}
-          HOME="$(mktemp -d)" ${lib.getExe pkgs.google-antigravity-cli} plugin validate --strict "$out"
-        '';
+        pkgs.runCommandLocal "antigravity-plugin-${name}"
+          {
+            passthru.builder = buildAntigravityPlugin;
+          }
+          ''
+            ${lib.getExe pkgs.python3} ${buildAntigravityPlugin} ${lib.escapeShellArg name} ${src} "$out" ${lib.escapeShellArg pinVersion}
+            HOME="$(mktemp -d)" ${lib.getExe pkgs.google-antigravity-cli} plugin validate --strict "$out"
+          '';
     in
     {
       ".gemini/config/skills" = {

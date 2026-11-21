@@ -70,6 +70,7 @@
 
   programs.zsh = {
     enable = true;
+    history.path = "${config.xdg.stateHome}/zsh/history";
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     initContent = ''
@@ -86,4 +87,16 @@
       ];
     };
   };
+
+  home.activation.migrateZshHistory = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    hist="''${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
+    if [ ! -s "$hist" ]; then
+      for old in "$HOME/.config/zsh/.zsh_history" "/persist$HOME/.config/zsh/.zsh_history"; do
+        if [ -s "$old" ]; then
+          install -Dm600 "$old" "$hist"
+          break
+        fi
+      done
+    fi
+  '';
 }

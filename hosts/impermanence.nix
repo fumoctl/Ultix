@@ -27,13 +27,14 @@
     script = ''
       set -e
       mkdir -p /btrfs_tmp
-      mount -t btrfs -o subvolid=5 /dev/mapper/crypted /btrfs_tmp
+      trap 'if mountpoint -q /btrfs_tmp; then umount /btrfs_tmp; fi' EXIT
+      mountpoint -q /btrfs_tmp || mount -t btrfs -o subvolid=5 /dev/mapper/crypted /btrfs_tmp
 
       if [ -e /btrfs_tmp/@ ]; then
         btrfs subvolume list -r /btrfs_tmp | while IFS= read -r line; do
           subvol="''${line#* path }"
           case "$subvol" in
-            @/*) btrfs property set -ts "/btrfs_tmp/$subvol" ro false ;;
+            @ | @/*) btrfs property set -ts "/btrfs_tmp/$subvol" ro false ;;
           esac
         done
         btrfs subvolume delete -R /btrfs_tmp/@
@@ -137,6 +138,7 @@
         ".local/state/noctalia"
         ".local/state/portal-screen-mirror"
         ".local/state/wireplumber"
+        ".local/state/zsh"
         ".local/bin"
 
         # Caches & Flatpak user state
@@ -172,7 +174,6 @@
       ];
 
       files = [
-        ".config/zsh/.zsh_history"
         {
           file = ".config/dolphinrc";
           method = "symlink";

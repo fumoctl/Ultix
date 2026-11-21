@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   ...
@@ -149,13 +148,10 @@ in
     ];
   };
 
-  # Rebuild KDE's KSycoca desktop/MIME index on activation so Dolphin immediately
-  # sees updated user/system .desktop files and MIME associations.
+  # Rebuild KDE's KSycoca desktop/MIME index on activation via the user unit so
+  # Dolphin immediately sees updated .desktop/MIME files and Flatpak exports.
   home.activation.rebuildKdeSycoca = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    rm -f "${config.xdg.cacheHome}/ksycoca"*
-    XDG_CONFIG_DIRS="/etc/xdg:/etc/profiles/per-user/${config.home.username}/etc/xdg:/run/current-system/sw/etc/xdg" \
-    XDG_DATA_DIRS="${config.xdg.dataHome}:/etc/profiles/per-user/${config.home.username}/share:/run/current-system/sw/share" \
-    XDG_MENU_PREFIX="umbriel-" \
-      ${pkgs.kdePackages.kservice}/bin/kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
+      ${pkgs.systemd}/bin/systemctl --user start nixos-rebuild-sycoca.service >/dev/null 2>&1 || true
   '';
 }

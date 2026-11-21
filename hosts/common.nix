@@ -117,12 +117,30 @@
   };
 
   # --- Locale & Time ---
-  services.tzupdate.enable = true;
+  services.tzupdate = {
+    enable = true;
+    timer.enable = false;
+  };
   systemd.services.tzupdate = lib.mkIf config.services.tzupdate.enable {
     wantedBy = lib.mkForce [ ];
     after = [ "NetworkManager-wait-online.service" ];
     wants = [ "NetworkManager-wait-online.service" ];
-    serviceConfig.SuccessExitStatus = 1;
+    serviceConfig = {
+      SuccessExitStatus = 1;
+      # Skip geolocation when offline or when egress routes through a VPN tunnel
+      # so VPN exit IPs never overwrite /etc/localtime and /persist/etc/localtime.
+      ExecCondition = pkgs.writeShellScript "tzupdate-no-vpn" ''
+        PATH="''${PATH:+$PATH:}${pkgs.iproute2}/bin"
+        route="$(ip -o route get 9.9.9.9 2>/dev/null || true)"
+        dev="''${route#* dev }"
+        dev="''${dev%% *}"
+        case "$dev" in
+          "" | "$route" | lo | tun* | tap* | utun* | wg* | amn* | ppp* | tailscale* | proton* | mullvad*)
+            exit 1
+            ;;
+        esac
+      '';
+    };
     postStart = ''
       if [ -L /etc/localtime ]; then
         mkdir -p /persist/etc
@@ -133,7 +151,10 @@
   networking.networkmanager.dispatcherScripts = lib.mkIf config.services.tzupdate.enable [
     {
       source = pkgs.writeShellScript "tzupdate" ''
-        if [ "$2" = "up" ] && [ "$1" != "lo" ] && [ "''${CONNECTION_EXTERNAL:-0}" != "1" ]; then
+        case "$1" in
+          lo | tun* | tap* | utun* | wg* | amn* | ppp* | tailscale*) exit 0 ;;
+        esac
+        if [ "$2" = "up" ] && [ "''${CONNECTION_EXTERNAL:-0}" != "1" ]; then
           ${config.systemd.package}/bin/systemctl start --no-block tzupdate.service
         fi
       '';

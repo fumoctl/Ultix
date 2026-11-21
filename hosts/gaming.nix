@@ -484,9 +484,7 @@ let
     name = "bottles-winetricks-inner";
     runtimeInputs = with pkgs; [
       coreutils
-      gnugrep
       gnused
-      winetricks
     ];
     text = ''
       usage() {
@@ -698,10 +696,7 @@ let
         local real_bin="$2"
         {
           cat <<'EOF'
-      #!/usr/bin/env bash
-      if [[ -z "''${ORIG_LD_LIBRARY_PATH+x}" ]]; then
-        export ORIG_LD_LIBRARY_PATH="''${LD_LIBRARY_PATH:-}"
-      fi
+      #!${pkgs.runtimeShell}
       if [[ -n "''${_BW_LD_PATHS:-}" ]]; then
         export LD_LIBRARY_PATH="''${_BW_LD_PATHS}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
       fi
@@ -825,6 +820,7 @@ let
         gst-libav
       ]);
     runScript = "bottles-winetricks-inner";
+    passthru.inner = bottles-winetricks-inner;
   };
 in
 {
@@ -866,28 +862,50 @@ in
         ''
           compat_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d"
           mkdir -p "$compat_dir"
-          for d in "$compat_dir"/*/; do
-            if [ -f "''${d}.nix-managed" ]; then
-              rm -rf "$d"
-            fi
-          done
           # `makeSteamCompatTool` packages put a warning file in `out` and the actual
           # runner directory in `steamcompattool`.
-          for pair in \
-            "Proton-CachyOS:${pkgs.proton-cachyos-bin_edge.steamcompattool}" \
-            "Proton-GE:${pkgs.proton-ge-bin_edge.steamcompattool}" \
-            "GE-Proton9-12:${proton-ge-9-12}"; do
+          pairs=(
+            "Proton-CachyOS:${pkgs.proton-cachyos-bin_edge.steamcompattool}"
+            "Proton-GE:${pkgs.proton-ge-bin_edge.steamcompattool}"
+            "GE-Proton9-12:${proton-ge-9-12}"
+          )
+          for pair in "''${pairs[@]}"; do
             name="''${pair%%:*}"
             src="''${pair#*:}"
             if [ ! -f "$src/compatibilitytool.vdf" ]; then
               echo "syncSteamCompatTools: missing compatibilitytool.vdf in $src ($name)" >&2
               exit 1
             fi
+          done
+          for pair in "''${pairs[@]}"; do
+            name="''${pair%%:*}"
+            src="''${pair#*:}"
             dest="$compat_dir/$name"
-            rm -rf "$dest"
+            if [ -L "$dest" ]; then
+              rm -f "$dest"
+            fi
             mkdir -p "$dest"
-            ln -s "$src"/* "$dest"/
+            ln -sfn "$src"/* "$dest"/
+            for entry in "$dest"/*; do
+              [ -e "$entry" ] || [ -L "$entry" ] || continue
+              if [ ! -e "$src/$(basename "$entry")" ] && [ ! -L "$src/$(basename "$entry")" ]; then
+                rm -rf "$entry"
+              fi
+            done
             touch "$dest/.nix-managed"
+          done
+          for d in "$compat_dir"/*/; do
+            [ -f "''${d}.nix-managed" ] || continue
+            keep=0
+            for pair in "''${pairs[@]}"; do
+              if [ "$d" = "$compat_dir/''${pair%%:*}/" ]; then
+                keep=1
+                break
+              fi
+            done
+            if [ "$keep" -eq 0 ]; then
+              rm -rf "$d"
+            fi
           done
         '';
   };

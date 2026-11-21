@@ -32,12 +32,6 @@
     firewall = {
       enable = true;
       checkReversePath = "loose";
-      trustedInterfaces = [
-        "tun0"
-        "tun2"
-        "amn0"
-        "utun420"
-      ];
     };
   };
 
