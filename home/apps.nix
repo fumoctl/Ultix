@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  inputs,
   ...
 }:
 
@@ -34,7 +35,7 @@
       '';
     })
     kdePackages.elisa
-    appimage-run
+    inputs.betterstremio.packages.${pkgs.stdenv.hostPlatform.system}.default
 
     # Fun & miscellaneous
     unstable.renpy

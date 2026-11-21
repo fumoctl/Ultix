@@ -449,7 +449,7 @@ in
           opacity = 1.0;
         }
         {
-          match.app_id = "^(com\\.stremio\\.Stremio|[Ss]tremio|mpv)$";
+          match.app_id = "^(com\\.betterstremio\\.BetterStremio|[Bb]etter[Ss]tremio|mpv)$";
           blur = false;
           opacity = 1.0;
         }

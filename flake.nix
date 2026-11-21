@@ -20,6 +20,7 @@
     nix-alien.url = "github:thiagokokada/nix-alien";
     windscribe-nixos.url = "github:fumoctl/windscribe-nixos";
     portal-screen-mirror.url = "github:fumoctl/portal-screen-mirror";
+    betterstremio.url = "github:fumoctl/BetterStremio/v1.2.2";
     antigravity-nix.url = "github:jacopone/antigravity-nix";
   };
 
@@ -113,6 +114,10 @@
           zshMigrateAct = pkgs.writeShellScript "zsh-migrate-act" ''
             set -euo pipefail
             ${hmCfg.home.activation.migrateZshHistory.data}
+          '';
+          gearleverAct = pkgs.writeShellScript "gearlever-dir-act" ''
+            set -euo pipefail
+            ${hmCfg.home.activation.configureGearLeverDir.data}
           '';
           cleanRootAct = pkgs.writeShellScript "impermanence-clean-root-act" (
             builtins.replaceStrings [ "/btrfs_tmp" ] [ "$BTRFS_TMP" ]
@@ -416,6 +421,38 @@
               exit 1
             fi
             test ! -f "$TMP/btrfs_tmp/.mounted"
+
+            # 7. configureGearLeverDir fresh creation, keyfile merge/update, idempotency, and corrupt-file guard
+            glHome="$TMP/gl-home"
+            glKeyfile="$glHome/.var/app/it.mijorus.gearlever/config/glib-2.0/settings/keyfile"
+            HOME="$glHome" ${gearleverAct}
+            test "$(stat -c '%a' "$glKeyfile")" = "600"
+            grep -Fxq "[it/mijorus/gearlever]" "$glKeyfile"
+            grep -Fxq "appimages-default-folder='~/Applications'" "$glKeyfile"
+
+            cat > "$glKeyfile" <<'EOF'
+            [it/mijorus/gearlever]
+            first-run=false
+            appimages-default-folder='~/AppImages'
+
+            [other/section]
+            flag=true
+            EOF
+            HOME="$glHome" ${gearleverAct}
+            test "$(stat -c '%a' "$glKeyfile")" = "600"
+            grep -Fxq "appimages-default-folder='~/Applications'" "$glKeyfile"
+            grep -Fxq "first-run=false" "$glKeyfile"
+            grep -Fxq "[other/section]" "$glKeyfile"
+            grep -Fxq "flag=true" "$glKeyfile"
+            ! grep -Fq "AppImages" "$glKeyfile"
+            HOME="$glHome" ${gearleverAct}
+
+            printf 'not-valid-ini\n' > "$glKeyfile"
+            cp "$glKeyfile" "$TMP/gl-malformed.orig"
+            if HOME="$glHome" ${gearleverAct} 2>/dev/null; then
+              exit 1
+            fi
+            cmp -s "$glKeyfile" "$TMP/gl-malformed.orig"
 
             touch "$out"
           '';

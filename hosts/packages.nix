@@ -18,6 +18,11 @@
 
   documentation.man.cache.enable = true;
 
+  programs.appimage = {
+    enable = true;
+    binfmt = true; # Allows executing AppImages directly
+  };
+
   programs.nix-ld = {
     enable = true;
     libraries = with pkgs; [
