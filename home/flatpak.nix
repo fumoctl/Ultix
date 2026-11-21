@@ -17,6 +17,8 @@
       "com.obsproject.Studio"
       "com.github.Matoking.protontricks"
       "com.ranfdev.DistroShelf"
+      "com.stremio.Stremio"
+      "org.qbittorrent.qBittorrent"
     ];
     update.auto = {
       enable = true;
@@ -36,6 +38,13 @@
         ];
       };
       "com.obsproject.Studio" = {
+        Context.unset-environment = [
+          "QT_PLUGIN_PATH"
+          "LD_LIBRARY_PATH"
+          "QT_QPA_PLATFORM_PLUGIN_PATH"
+        ];
+      };
+      "org.qbittorrent.qBittorrent" = {
         Context.unset-environment = [
           "QT_PLUGIN_PATH"
           "LD_LIBRARY_PATH"

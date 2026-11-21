@@ -145,6 +145,12 @@ in
         "application/x-msi"
         "application/vnd.microsoft.portable-executable"
       ])
+
+      # Torrents & Magnet Links (qBittorrent)
+      (associate "org.qbittorrent.qBittorrent.desktop" [
+        "application/x-bittorrent"
+        "x-scheme-handler/magnet"
+      ])
     ];
   };
 
