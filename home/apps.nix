@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   inputs,
@@ -49,72 +50,14 @@
     mutableExtensionsDir = true;
   };
 
-  xdg.configFile."mpv/shaders".source = pkgs.anime4k;
-
-  programs.mpv =
-    let
-      shaderChain = names: lib.concatMapStringsSep ":" (n: "~~/shaders/Anime4K_${n}.glsl") names;
-      modeA = shaderChain [
-        "Clamp_Highlights"
-        "Restore_CNN_VL"
-        "Upscale_CNN_x2_VL"
-        "AutoDownscalePre_x2"
-        "AutoDownscalePre_x4"
-        "Upscale_CNN_x2_M"
-      ];
-      bindMode =
-        names: label:
-        ''no-osd change-list glsl-shaders set "${shaderChain names}"; show-text "Anime4K: ${label}"'';
-    in
-    {
-      enable = true;
-      config.glsl-shaders = modeA;
-      bindings = {
-        "CTRL+1" = ''no-osd change-list glsl-shaders set "${modeA}"; show-text "Anime4K: Mode A (HQ)"'';
-        "CTRL+2" = bindMode [
-          "Clamp_Highlights"
-          "Restore_CNN_Soft_VL"
-          "Upscale_CNN_x2_VL"
-          "AutoDownscalePre_x2"
-          "AutoDownscalePre_x4"
-          "Upscale_CNN_x2_M"
-        ] "Mode B (HQ)";
-        "CTRL+3" = bindMode [
-          "Clamp_Highlights"
-          "Upscale_Denoise_CNN_x2_VL"
-          "AutoDownscalePre_x2"
-          "AutoDownscalePre_x4"
-          "Upscale_CNN_x2_M"
-        ] "Mode C (HQ)";
-        "CTRL+4" = bindMode [
-          "Clamp_Highlights"
-          "Restore_CNN_VL"
-          "Upscale_CNN_x2_VL"
-          "Restore_CNN_M"
-          "AutoDownscalePre_x2"
-          "AutoDownscalePre_x4"
-          "Upscale_CNN_x2_M"
-        ] "Mode A+A (HQ)";
-        "CTRL+5" = bindMode [
-          "Clamp_Highlights"
-          "Restore_CNN_Soft_VL"
-          "Upscale_CNN_x2_VL"
-          "AutoDownscalePre_x2"
-          "AutoDownscalePre_x4"
-          "Restore_CNN_Soft_M"
-          "Upscale_CNN_x2_M"
-        ] "Mode B+B (HQ)";
-        "CTRL+6" = bindMode [
-          "Clamp_Highlights"
-          "Upscale_Denoise_CNN_x2_VL"
-          "AutoDownscalePre_x2"
-          "AutoDownscalePre_x4"
-          "Restore_CNN_M"
-          "Upscale_CNN_x2_M"
-        ] "Mode C+A (HQ)";
-        "CTRL+0" = ''no-osd change-list glsl-shaders clr ""; show-text "GLSL shaders cleared"'';
-      };
+  programs.mpv = {
+    enable = true;
+    scripts = with pkgs.mpvScripts; [ uosc sponsorblock ];
+    config = {
+      profile = "high-quality";
+      cache-default = 4000000;
     };
+  };
 
   # Antigravity global skills & portable npins-backed plugins.
   # - Drop hand-written skill folders (with SKILL.md) into `dotfiles/skills/`.
