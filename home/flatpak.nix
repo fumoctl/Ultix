@@ -41,11 +41,6 @@
           "LD_LIBRARY_PATH"
           "QT_QPA_PLATFORM_PLUGIN_PATH"
         ];
-        Environment = {
-          QT_PLUGIN_PATH = "";
-          LD_LIBRARY_PATH = "";
-          QT_QPA_PLATFORM_PLUGIN_PATH = "";
-        };
       };
     };
   };

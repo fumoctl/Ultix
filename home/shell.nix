@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -26,22 +27,24 @@
   # Fastfetch configuration & randomized PNG logos (~/.config/fastfetch)
   xdg.configFile."fastfetch".source = ../dotfiles/fastfetch;
 
-  # SSH client configuration with non-symlink 0600 permission safety
-  home.file.".ssh/config_source" = {
-    text = ''
-      Host github.com
-          HostName github.com
-          User git
-          IdentityFile ~/.ssh/fumossh.key
+  # SSH client configuration with non-symlink 0600 permission safety.
+  # Only github.com sets IdentitiesOnly; Host * leaves SSH_AUTH_SOCK (gpg-agent) usable.
+  home.activation.sshConfig =
+    let
+      sshConfig = pkgs.writeText "ssh-config" ''
+        Host github.com
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/fumossh.key
+            IdentitiesOnly yes
 
-      Host *
-          IdentityFile ~/.ssh/id_ed25519
-          IdentitiesOnly yes
+        Host *
+            IdentityFile ~/.ssh/id_ed25519
+      '';
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" "linkGeneration" ] ''
+      mkdir -p -m 700 ~/.ssh && rm -f ~/.ssh/config_source && install -m 600 ${sshConfig} ~/.ssh/config
     '';
-    onChange = ''
-      install -m 600 ~/.ssh/config_source ~/.ssh/config
-    '';
-  };
 
   # Git with commit signing
   programs.git = {

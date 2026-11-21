@@ -123,6 +123,12 @@
     after = [ "NetworkManager-wait-online.service" ];
     wants = [ "NetworkManager-wait-online.service" ];
     serviceConfig.SuccessExitStatus = 1;
+    postStart = ''
+      if [ -L /etc/localtime ]; then
+        mkdir -p /persist/etc
+        cp -Pf /etc/localtime /persist/etc/localtime
+      fi
+    '';
   };
   networking.networkmanager.dispatcherScripts = lib.mkIf config.services.tzupdate.enable [
     {
@@ -133,7 +139,17 @@
       '';
     }
   ];
-  time.timeZone = lib.mkDefault "America/Argentina/Buenos_Aires";
+  # Seed /etc/localtime on ephemeral boots without symlinking into /persist
+  # (systemd-timedated unlinks /etc/localtime on timedatectl set-timezone).
+  system.activationScripts.localtime = lib.stringAfter [ "etc" ] ''
+    if [ ! -e /etc/localtime ]; then
+      if [ -L /persist/etc/localtime ] && [ -e /persist/etc/localtime ]; then
+        cp -Pf /persist/etc/localtime /etc/localtime
+      else
+        ln -sf /etc/zoneinfo/America/Argentina/Buenos_Aires /etc/localtime
+      fi
+    fi
+  '';
 
   i18n = {
     defaultLocale = lib.mkDefault "en_US.UTF-8";

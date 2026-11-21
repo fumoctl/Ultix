@@ -23,7 +23,6 @@
     libraries = with pkgs; [
       # Core C/C++ runtimes & compilers
       stdenv.cc.cc.lib
-      gcc.cc.lib
       glibc
       zlib
       systemd
@@ -59,7 +58,6 @@
 
       # Audio output (needed for emulator guest sound)
       alsa-lib
-      pulseaudio
       libpulseaudio
 
       # X11 Session Management & Core X11 client libraries

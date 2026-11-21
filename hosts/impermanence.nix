@@ -13,13 +13,13 @@
   boot.initrd.systemd.initrdBin = with pkgs; [
     btrfs-progs
     coreutils
-    gnused
     util-linux
   ];
 
   boot.initrd.systemd.services.impermanence-clean-root = {
     description = "Recreate the ephemeral Btrfs root subvolume";
     wantedBy = [ "initrd.target" ];
+    requires = [ "dev-mapper-crypted.device" ];
     after = [ "dev-mapper-crypted.device" ];
     before = [ "sysroot.mount" ];
     unitConfig.DefaultDependencies = "no";
@@ -30,13 +30,13 @@
       mount -t btrfs -o subvolid=5 /dev/mapper/crypted /btrfs_tmp
 
       if [ -e /btrfs_tmp/@ ]; then
-        btrfs subvolume list -o /btrfs_tmp/@ \
-          | sed -n 's/^.* path //p' \
-          | sort -r \
-          | while IFS= read -r subvolume; do
-              btrfs subvolume delete "/btrfs_tmp/$subvolume"
-            done
-        btrfs subvolume delete /btrfs_tmp/@
+        btrfs subvolume list -r /btrfs_tmp | while IFS= read -r line; do
+          subvol="''${line#* path }"
+          case "$subvol" in
+            @/*) btrfs property set -ts "/btrfs_tmp/$subvol" ro false ;;
+          esac
+        done
+        btrfs subvolume delete -R /btrfs_tmp/@
       fi
 
       btrfs subvolume create /btrfs_tmp/@
@@ -56,6 +56,7 @@
 
     directories = [
       "/etc/NetworkManager/system-connections"
+      "/etc/lact"
       "/var/lib/AccountsService"
       "/var/lib/NetworkManager"
       "/var/lib/bluetooth"
@@ -101,7 +102,6 @@
 
         # Application config (~/.config)
         ".config/BraveSoftware"
-        ".config/Code"
         ".config/VSCodium"
         ".config/discord"
         ".config/dconf"
@@ -111,7 +111,6 @@
         ".config/Antigravity"
         ".config/antigravity"
         ".config/MangoHud"
-        ".config/xfce4"
         ".config/AmneziaVPN.ORG"
         ".config/Podman Desktop"
         ".config/.android"
@@ -148,10 +147,7 @@
         ".var/app"
 
         # Editors, agents, mail, gaming & toolchains
-        ".vscode"
         ".vscode-oss"
-        ".vscode-shared"
-        ".vscode-oss-shared"
         ".duckdb"
         ".agents"
         ".steam"

@@ -192,6 +192,7 @@
         in
         pkgs.runCommandLocal "antigravity-plugin-${name}" { } ''
           ${lib.getExe pkgs.python3} ${buildAntigravityPlugin} ${lib.escapeShellArg name} ${src} "$out" ${lib.escapeShellArg pinVersion}
+          HOME="$(mktemp -d)" ${lib.getExe pkgs.google-antigravity-cli} plugin validate --strict "$out"
         '';
     in
     {
@@ -238,7 +239,7 @@
             command = lib.getExe pkgs.bash;
             args = [
               "-c"
-              ''exec ${lib.getExe pkgs.nodejs} "$(ls -d "$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode | sort -V | tail -n1)" mcp''
+              ''shopt -s nullglob; bins=("$HOME"/.vscode-oss/extensions/dbcode.dbcode-*/out/cli/dbcode); if [ "''${#bins[@]}" -eq 0 ]; then echo "dbcode VSCodium extension not installed" >&2; exit 1; fi; exec ${lib.getExe pkgs.nodejs} "$(printf '%s\n' "''${bins[@]}" | ${pkgs.coreutils}/bin/sort -V | ${pkgs.coreutils}/bin/tail -n1)" mcp''
             ];
           };
           playwright = {
@@ -264,28 +265,37 @@
       jqBin = lib.getExe pkgs.jq;
     in
     lib.hm.dag.entryAfter [ "writeBoundary" "linkGeneration" ] ''
-      mcpCfg="$HOME/.gemini/config/mcp_config.json"
-      mkdir -p "$(dirname "$mcpCfg")"
-      rm -f "$mcpCfg.backup"
-      # Names of servers this block managed last time; any no longer declared get pruned.
-      stateFile="$HOME/.gemini/config/.nix-managed-mcp.json"
-      oldNames='[]'
-      if [ -f "$stateFile" ] && ${jqBin} -e 'type == "array"' "$stateFile" >/dev/null 2>&1; then
-        oldNames="$(cat "$stateFile")"
-      fi
-      newNames="$(${jqBin} -c '.mcpServers | keys' "${declarativeMcp}")"
-      tmpCfg="$(mktemp)"
-      if [ -f "$mcpCfg" ] && [ ! -L "$mcpCfg" ] && ${jqBin} -e 'type == "object"' "$mcpCfg" >/dev/null 2>&1; then
-        ${jqBin} -s --argjson old "$oldNames" '
-          (.[0] | .mcpServers |= ((. // {}) | with_entries(select(.key as $k | ($old | index($k)) | not)))) * .[1]
-        ' "$mcpCfg" "${declarativeMcp}" > "$tmpCfg"
-      else
-        cat "${declarativeMcp}" > "$tmpCfg"
-      fi
-      rm -f "$mcpCfg"
-      install -m 600 "$tmpCfg" "$mcpCfg"
-      rm -f "$tmpCfg"
-      printf '%s\n' "$newNames" > "$stateFile"
+      (
+        set -euo pipefail
+        mcpCfg="$HOME/.gemini/config/mcp_config.json"
+        mkdir -p "$(dirname "$mcpCfg")"
+        if [ -e "$mcpCfg" ] && [ ! -L "$mcpCfg" ]; then
+          if [ ! -f "$mcpCfg" ] || ! ${jqBin} -e 'type == "object"' "$mcpCfg" >/dev/null 2>&1; then
+            echo "antigravityMcpConfig: $mcpCfg is not a valid JSON object; refusing to overwrite" >&2
+            exit 1
+          fi
+        fi
+        # Names of servers this block managed last time; any no longer declared get pruned.
+        stateFile="$HOME/.gemini/config/.nix-managed-mcp.json"
+        oldNames='[]'
+        if [ -f "$stateFile" ] && ${jqBin} -e 'type == "array"' "$stateFile" >/dev/null 2>&1; then
+          oldNames="$(cat "$stateFile")"
+        fi
+        newNames="$(${jqBin} -c '.mcpServers | keys' "${declarativeMcp}")"
+        tmpCfg="$(mktemp "''${mcpCfg}.tmp.XXXXXX")"
+        trap 'rm -f "$tmpCfg"' EXIT
+        chmod 600 "$tmpCfg"
+        if [ -f "$mcpCfg" ] && [ ! -L "$mcpCfg" ]; then
+          ${jqBin} -s --argjson old "$oldNames" '
+            (.[0] + .[1]) + { mcpServers: (((.[0].mcpServers // {}) | with_entries(select(.key as $k | ($old | index($k)) | not))) + .[1].mcpServers) }
+          ' "$mcpCfg" "${declarativeMcp}" > "$tmpCfg"
+        else
+          cat "${declarativeMcp}" > "$tmpCfg"
+        fi
+        mv -f "$tmpCfg" "$mcpCfg"
+        rm -f "$mcpCfg.backup"
+        printf '%s\n' "$newNames" > "$stateFile"
+      )
     '';
 
   # Brave Browser with privacy and utility extensions

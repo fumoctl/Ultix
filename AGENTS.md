@@ -1,227 +1,116 @@
 # AGENTS.md — Ultix
 
-Architecture reference, invariants, and workflow rules for AI coding agents and contributors working in this repository.
+Architecture reference and invariants for Ultix — a modular **NixOS (`nixos-26.05`) flake** for `ultix-desktop` and `ultix-laptop` (`x86_64-linux`). Leaf values (packages, keybinds, widgets, MIME, themes) change often; read `.nix` files directly. Keep `AGENTS.md` `< 16000` B (`<user_rules>` cap: 16 KiB).
 
-Ultix is a modular, declarative **NixOS (`nixos-26.05`) flake** for two `x86_64-linux` machines (`ultix-desktop` and `ultix-laptop`). Individual user packages, keybinds, widgets, MIME mappings, and themes evolve frequently — read the relevant `.nix` module directly rather than assuming leaf values. This guide focuses on **structural wiring, non-obvious invariants, and operational traps**.
+## Default Agent Mode: Ponytail (Mandatory)
 
----
+Agents here **MUST always activate and follow `ponytail` (`full` default)** unless the user asks for `lite`, `ultra`, or opts out (`"stop ponytail"` / `"normal mode"`):
+
+- **Before coding**: Read `~/.gemini/config/plugins/ponytail/skills/ponytail/SKILL.md`; if absent locally (e.g. another machine/setup), fetch/read `https://raw.githubusercontent.com/DietrichGebert/ponytail/main/skills/ponytail/SKILL.md`, falling back to these inline rules if offline.
+- **Smallest complete change**: Solve the whole task with the shortest clear diff. Reuse repo/NixOS patterns; zero unrequested abstractions, wrappers, options, or "for later" code; update affected callers, checks, and docs; never cut security, validation, or data-loss guards.
+- **Mandatory runtime/script tests**: **Any new or modified runtime/procedural code that has even a remote chance of not being caught by Nix evaluation or rebuilds (Bash/Python scripts, `jq`/`sed`/`awk` pipelines, activation hooks, systemd script blocks, CLI wrappers) MUST include an automated test in `checks.x86_64-linux.scripts` (`flake.nix`)** and pass `nix build --no-link .#checks.x86_64-linux.scripts` before completion.
+- **Shortcuts & closeout**: Mark known-limit shortcuts `# shortcut: <limit>, <when to upgrade>`, and **end replies with 1–2 lines naming what was skipped/not checked and any risk**.
 
 ## 1. Repository Layout & Module Graph
 
 ```text
 Ultix/
-├── flake.nix                       # Inputs, binary caches, `mkHost` → nixosConfigurations.<host>
-├── flake.lock                      # Locked input revisions (commit alongside flake.nix changes)
-├── npins/                          # `sources.json` + `default.nix`: pinned external Antigravity skill/plugin repos
-├── .sops.yaml                      # Post-quantum Age recipient rules for SOPS
-├── secrets/secrets.yaml            # SOPS-encrypted user/API/SSH/PGP secrets
+├── flake.nix           # Inputs, caches, mkHost, checks.x86_64-linux.scripts
+├── flake.lock          # Locked inputs (commit with flake.nix)
+├── npins/              # sources.json + default.nix: pinned plugin repos
+├── .sops.yaml          # Post-quantum Age recipient rules
+├── secrets/secrets.yaml # SOPS-encrypted user/API/SSH/PGP secrets
 ├── hosts/
-│   ├── common.nix                  # Shared hub: Nix/nh, overlays, boot/sysctl, limits, locale, user + HM wiring
-│   ├── impermanence.nix            # Initrd Btrfs `@` wipe service + `/persist` state declarations
-│   ├── networking.nix              # nftables, NetworkManager, systemd-resolved (DoT/DNSSEC), VPN module
-│   ├── desktop-env.nix             # Umbriel, Noctalia, Noctalia Greeter + PAM, PipeWire, portals, fonts, KF6/KIO glue
-│   ├── gaming.nix                  # Graphics, Steam/Proton activation, `gs-run` & `bottles-winetricks` wrappers
-│   ├── containers.nix              # Rootful Docker, rootless Podman, shared OCI containers, libvirt/KVM
-│   ├── packages.nix                # Shared system CLI/admin tools, `direnv`, `gnupg` SSH agent, `nix-ld`
-│   ├── desktop/                    # Host `ultix-desktop`: default.nix, hardware-configuration.nix, disko.nix, containers.nix
-│   └── laptop/                     # Host `ultix-laptop`:  default.nix, hardware-configuration.nix, disko.nix, containers.nix
+│   ├── common.nix      # Nix/nh, overlays, boot/sysctl, limits, locale/tz, user+HM
+│   ├── impermanence.nix # Initrd Btrfs @ wipe + /persist paths
+│   ├── networking.nix  # nftables, NetworkManager, resolved (DoT/DNSSEC), VPN
+│   ├── desktop-env.nix # Umbriel, Noctalia, Greeter+PAM, PipeWire, portals, KF6/KIO
+│   ├── gaming.nix      # Graphics, Proton sync, gs-run, bottles-winetricks
+│   ├── containers.nix  # Docker, rootless Podman, shared OCI, libvirt/KVM
+│   ├── packages.nix    # CLI tools, direnv, gnupg SSH agent, nix-ld
+│   └── {desktop,laptop}/ # {default,hardware-configuration,disko,containers}.nix
 ├── home/
-│   ├── default.nix                 # Home Manager entry point, identity, gnome-keyring user service
-│   ├── secrets.nix                 # `sops-nix` HM module, secret declarations, shell env template, PGP import unit
-│   ├── noctalia.nix                # Pure-Nix `programs.{noctalia,umbriel}.settings`, GTK/Qt/cursor integration
-│   ├── shell.nix                   # Interactive shell, Git signing, `0600` SSH config copy, terminal profile
-│   ├── apps.nix                    # User GUI/dev packages, Antigravity MCP merge hook & `npins`-backed plugins
-│   ├── flatpak.nix                 # Declarative `nix-flatpak` remotes/apps, update timer, sandbox `overrides`
-│   └── mime.nix                    # `xdg.mimeApps` associations + KSycoca cache rebuild hook
-└── dotfiles/                       # Static assets (avatar, wallpapers, fastfetch config, agent skills)
+│   ├── default.nix     # HM entry, identity, gnome-keyring
+│   ├── secrets.nix     # sops-nix secrets, shell env, PGP import
+│   ├── noctalia.nix    # {noctalia,umbriel}.settings, GTK/Qt/cursor
+│   ├── shell.nix       # Zsh, Git signing, 0600 ~/.ssh/config, Konsole
+│   ├── apps.nix        # Apps, Antigravity MCP merge & npins plugins
+│   ├── flatpak.nix     # nix-flatpak remotes/apps, timer, overrides
+│   └── mime.nix        # xdg.mimeApps + KSycoca rebuild hook
+└── dotfiles/           # Avatar, wallpapers, fastfetch, local skills/
 ```
 
 ### How a Host Evaluates
-
-1. **`flake.nix` (`mkHost`)** instantiates `nixpkgs.lib.nixosSystem` for `x86_64-linux` with `specialArgs = { inherit inputs; }` and loads `disko`, `home-manager`, `chaotic.nixosModules.{nyx-cache,nyx-overlay,nyx-registry}`, plus `./hosts/desktop` or `./hosts/laptop`.
-2. **`hosts/{desktop,laptop}/default.nix`** imports `[ ../common.nix ../containers.nix ./containers.nix ./hardware-configuration.nix ./disko.nix ]` and sets machine-specific hardware, kernel, bootloader, and `networking.hostName`.
-3. **`hosts/common.nix`** imports `[ ./impermanence.nix ./networking.nix ./desktop-env.nix ./gaming.nix ./packages.nix ]` and wires Home Manager (`useGlobalPkgs = true`, `useUserPackages = true`, `extraSpecialArgs = { inherit inputs; }`, `backupFileExtension = "backup"`, `users.fumoctl = import ../home`).
-4. **Third-party flake modules** (`impermanence`, `noctalia`, `noctalia-greeter`, `umbriel`, `windscribe-nixos`, `sops-nix`, `nix-flatpak`) are imported inside the specific domain file that configures them rather than in `flake.nix`.
-
----
+1. **`flake.nix` (`mkHost`)**: `nixosSystem` (`x86_64-linux`, `specialArgs = { inherit inputs; }`) with `disko`, `home-manager`, `chaotic.nixosModules.{nyx-cache,nyx-overlay,nyx-registry}`, `./hosts/{desktop,laptop}`.
+2. **`hosts/{desktop,laptop}/default.nix`**: Imports `[ ../common.nix ../containers.nix ./containers.nix ./hardware-configuration.nix ./disko.nix ]` + HW, kernel, Limine, `hostName`.
+3. **`hosts/common.nix`**: Imports `./{impermanence,networking,desktop-env,gaming,packages}.nix` and wires HM (`useGlobalPkgs`/`useUserPackages = true`, `extraSpecialArgs = { inherit inputs; }`, `backupFileExtension = "backup"`, `users.fumoctl = import ../home`).
+4. **Third-party modules** (`impermanence`, `noctalia{,-greeter}`, `umbriel`, `windscribe-nixos`, `sops-nix`, `nix-flatpak`) import in their domain `.nix`, never `flake.nix`.
 
 ## 2. Hosts & Target Constraints
 
-| Flake Output / Hostname | Directory | Hardware Profile | Kernel & Boot |
-| :--- | :--- | :--- | :--- |
-| **`ultix-desktop`** | `hosts/desktop/` | AMD Zen 4 desktop, discrete AMD GPU (`amdgpu`, `amdgpu.runpm=0`) | `linuxPackages_cachyos-lto-znver4` (fallback `linuxPackages_latest`), Limine |
-| **`ultix-laptop`** | `hosts/laptop/` | TUXEDO laptop, AMD iGPU + NVIDIA open PRIME offload, `tuxedo-drivers` + `tuxedo-rs`, `captive-browser` | `linuxPackages_xanmod`, Limine |
+| Host | Dir | Hardware | Kernel & Boot |
+| --- | --- | --- | --- |
+| **`ultix-desktop`** | `hosts/desktop/` | AMD Zen 4, AMD dGPU (`amdgpu`, `amdgpu.runpm=0`) | `linuxPackages_cachyos-lto-znver4` (`_latest` fallback), Limine |
+| **`ultix-laptop`** | `hosts/laptop/` | TUXEDO, AMD iGPU + NVIDIA open PRIME, `tuxedo-{drivers,rs}`, `captive-browser` (Brave) | `linuxPackages_xanmod`, Limine |
 
-- **Single architecture (`x86_64-linux`)**: Both hosts share one system string. Do not introduce `flake-utils.eachSystem` or `aarch64` conditionals unless explicitly requested.
-- **Single primary user (`fumoctl`)**: UID `1000`, primary group `fumoctl`, `linger = true`, `autoSubUidGidRange = true`. Both machines share the same Home Manager profile and `/persist` layout; gate machine differences in `hosts/{desktop,laptop}/*.nix`.
-
----
+- **Single arch (`x86_64-linux`) & user (`fumoctl`)**: No `eachSystem`/`aarch64` conditionals unless asked. UID `1000`, group `fumoctl`, `linger = true`, `autoSubUidGidRange = true`; shared HM + `/persist`, host diffs gated in `hosts/{desktop,laptop}/*.nix`.
 
 ## 3. Inputs, Overlays & Nix Daemon Mechanics
 
-- **Unstable packages**: `hosts/common.nix` overlays `inputs.nixpkgs-unstable` onto `pkgs.unstable` (with `allowUnfree = true` and `android_sdk.accept_license = true`). Always reference unstable packages as `pkgs.unstable.<pkg>` (or `unstable.<pkg>` inside `with pkgs;`); never re-import `inputs.nixpkgs-unstable` in modules.
-- **Global `pkgs` in Home Manager**: Because `home-manager.useGlobalPkgs = true` is active, overlays defined in `hosts/common.nix` are automatically available across `home/*.nix`, and `home/*.nix` must not set `nixpkgs.*` options.
-- **`inputs.*.follows` discipline**: Only `home-manager` sets `inputs.nixpkgs.follows = "nixpkgs"`. Other flake inputs intentionally retain their own locked `nixpkgs` revisions so upstream binary caches (`noctalia.cachix.org`, `umbriel.cachix.org`, `nyx-cache.chaotic.cx`) hit cleanly without compiling compositors or kernels locally, and Chaotic's overlay/kernel pairing stays intact. Do not add `follows` overrides unless asked.
-- **Substituter duplication**: Binary caches are declared in both `flake.nix` (`nixConfig`) and `hosts/common.nix` (`nix.settings`). NixOS merges `substituters` additively with defaults, producing harmless duplicates in `/etc/nix/nix.conf` — do not `mkForce` them away.
-- **Store pruning via `nh`**: `programs.nh` (`flake = "/home/fumoctl/Projects/Ultix"`) manages rebuilds and weekly store/generation cleanup (`programs.nh.clean.enable = true`). Do **not** enable `nix.gc.automatic` alongside `nh.clean` (triggers a NixOS module conflict warning). Boot entries on `/boot` are bounded separately by `boot.loader.limine.maxGenerations`.
-
----
+- **Unstable & HM `pkgs`**: `hosts/common.nix` overlays `inputs.nixpkgs-unstable` as `pkgs.unstable` (`allowUnfree = true`, `android_sdk.accept_license = true`); never re-import it or set `nixpkgs.*` in `home/*.nix` (`useGlobalPkgs = true`).
+- **`follows` & caches**: Only `home-manager` sets `nixpkgs.follows = "nixpkgs"`; others keep locked `nixpkgs` so `{noctalia,umbriel}.cachix.org`, `nyx-cache.chaotic.cx`, and Chaotic kernel/overlay pairs hit caches. Duplicate `substituters` (`flake.nix` `nixConfig` + `hosts/common.nix` `nix.settings`) are harmless — never `mkForce`.
+- **Pruning (`nh`)**: `programs.nh` (`flake = "/home/fumoctl/Projects/Ultix"`, `clean.enable = true`) owns rebuilds + weekly GC; never set `nix.gc.automatic`. `limine.maxGenerations` bounds `/boot`.
 
 ## 4. Storage, Impermanence & Credential Invariants
 
-### Disko & `hardware-configuration.nix`
-- Each host defines its full GPT → LUKS2 (`crypted`) → Btrfs layout (`@`, `@persist`, `@nix`, `@log`, `@snapshots`, `@swap` with 32G swapfile at `/.swapvol/swapfile`) in `hosts/<dir>/disko.nix`.
-- Disko mounts partitions by GPT partlabel (`/dev/disk/by-partlabel/disk-main-*`). `hardware-configuration.nix` intentionally contains **only kernel module declarations and zero `fileSystems` / `swapDevices`**. Never add filesystem mounts there.
-
-### Ephemeral `/` Wipe & `/persist` (`hosts/impermanence.nix`)
-- `/persist`, `/nix`, and `/var/log` set `neededForBoot = true`.
-- During initrd (`after = [ "dev-mapper-crypted.device" ]`, `before = [ "sysroot.mount" ]`), `boot.initrd.systemd.services.impermanence-clean-root` mounts `subvolid=5` of `/dev/mapper/crypted`, recursively deletes any nested subvolumes inside `@`, deletes `@`, and creates a blank `@`.
-- **Any state in `/` or `/home/fumoctl` not listed in `environment.persistence."/persist"` (or linked from `/nix/store`) is destroyed on every reboot.** Whenever adding a stateful system service or user application, declare its state paths in `hosts/impermanence.nix`.
-
-### Persistence & Mutable-File Patterns
-1. **KDE / `QSaveFile` config files (`*rc`, `*staterc`)**: Qt's `QSaveFile` writes to a temp file and `rename()`s over the target, which fails across bind-mounted individual files and refuses to write through dangling symlinks. Persist single KConfig files with `{ file = "..."; method = "symlink"; }` **and** pre-create the backing file in `/persist/home/fumoctl/...` via `systemd.tmpfiles.rules`.
-2. **Files mutated in place or requiring strict mode bits**: Home Manager symlinks point into `/nix/store` (`0444`, read-only). When a tool requires a real `0600` file (e.g. `~/.ssh/config` in `home/shell.nix`) or rewrites its own JSON config at runtime inside a persisted directory (e.g. `home.activation.antigravityMcpConfig` in `home/apps.nix`), materialize/merge the regular file via `onChange` or `home.activation` (`lib.hm.dag.entryAfter [ "writeBoundary" ... ]`) using `install -m 600` instead of linking directly.
-3. **Immutable user credentials**: `users.mutableUsers = false` and `users.users.fumoctl.hashedPasswordFile = "/persist/passwords/fumoctl"`. Never point `hashedPasswordFile` outside `/persist` and never commit password hashes.
-4. **`userdbd` disabled**: `hosts/common.nix` overrides `systemd` with `withUserDb = false` and sets `services.userdbd.enable = lib.mkForce false` intentionally.
-
----
+- **Disko & `hardware-configuration.nix`**: `hosts/<dir>/disko.nix` defines GPT → LUKS2 (`crypted`) → Btrfs (`@`, `@persist`, `@nix`, `@log`, `@snapshots`, `@swap` + 32G `/.swapvol/swapfile`) on `/dev/disk/by-partlabel/disk-main-*`; `hardware-configuration.nix` has **only kernel modules and zero `fileSystems`/`swapDevices`**.
+- **Ephemeral `/` wipe (`hosts/impermanence.nix`)**: `/{persist,nix,var/log}` set `neededForBoot = true`. Initrd `impermanence-clean-root` (`requires`/`after = [ "dev-mapper-crypted.device" ]`, `before = [ "sysroot.mount" ]`) mounts `subvolid=5`, clears `ro` on `@/*`, runs `btrfs subvolume delete -R /btrfs_tmp/@`, and recreates `@`. **Unlisted `/` or `$HOME` state wipes every reboot** — register it in `hosts/impermanence.nix`.
+- **Mutable files & credentials**:
+  1. **KDE `QSaveFile` (`*rc`, `*staterc`)**: Atomic renames break bind-mounts/dangling symlinks — use `{ file = "..."; method = "symlink"; }` + `tmpfiles.rules` pre-creating `/persist/home/fumoctl/...`.
+  2. **`0600` / mutable JSON**: Store symlinks are `0444`; materialize/merge real `0600` files in `home.activation` (`entryAfter [ "writeBoundary" "linkGeneration" ]`), e.g. `sshConfig` (`~/.ssh/config`, `home/shell.nix`) and `antigravityMcpConfig` (`home/apps.nix`).
+  3. **Passwords & `userdbd`**: `mutableUsers = false`, `hashedPasswordFile = "/persist/passwords/fumoctl"` (never outside `/persist` or committed); `systemd.override { withUserDb = false; }` + `services.userdbd.enable = mkForce false`.
 
 ## 5. Desktop Session, Portals & Toolkit Glue
 
-### Pure-Nix Compositor, Shell & Greeter (`hosts/desktop-env.nix` + `home/noctalia.nix`)
-- **No external `.toml` files**: Umbriel (`programs.umbriel.settings`), Noctalia (`programs.noctalia.settings`), and Noctalia Greeter (`services.displayManager.noctalia-greeter.settings`) serialize directly from Nix attrsets and run upstream config validation (`noctalia config validate` / `umbriel config validate`). If enabling custom Noctalia widget plugins, ensure the plugin ID is also listed in `plugins.enabled` so validation succeeds.
-- **Systemd session startup**: `programs.umbriel.enable = true` (NixOS) installs `start-umbriel` and `umbriel.service`, which exports the Wayland environment and activates `graphical-session.target`, starting Home Manager's `noctalia.service` (`programs.noctalia.systemd.enable = true`). **Never** add `"noctalia"` to `programs.umbriel.settings.general.autostart` (spawns a duplicate bar/shell), and do not assume a system-level `noctalia.service` exists.
-- **Runtime overrides win over Nix**: GUI edits in Noctalia write to `~/.local/state/noctalia/settings.toml` (persisted), overriding keys in `~/.config/noctalia/config.toml`. Noctalia Greeter similarly layers `/var/lib/noctalia-greeter/sync.toml` (populated via `passwordless-sync-users = [ "fumoctl" ]`). Check those persisted state files whenever a declarative change appears ignored.
-- **Dynamic Umbriel theme include**: Keep `programs.umbriel.settings.include.optional.files = [ "noctalia.toml" ]` as that exact literal string so Noctalia's `umbriel` template hook writes `~/.config/umbriel/noctalia.toml` without attempting to mutate the read-only Home Manager symlink `~/.config/umbriel/config.toml`.
-- **Login portrait**: Because `/home/fumoctl` is `0700`, `greeter` cannot read `$HOME/.fumoctl.jpg`. `hosts/desktop-env.nix` links `dotfiles/.fumoctl.jpg` into `/var/lib/AccountsService/{icons,users}/fumoctl` via `systemd.tmpfiles.rules` (keep `dotfiles/.fumoctl.jpg` 1:1 square for full-resolution avatar decoding).
-
-### XDG Portals (`hosts/desktop-env.nix`)
-- `xdg.portal.config.umbriel` overrides `config.common` for **every** portal interface when `XDG_CURRENT_DESKTOP=Umbriel`.
-- `xdg-desktop-portal-umbriel` only implements Screenshot, ScreenCast, and InputCapture. **`default = [ "umbriel" "gtk" ]` must keep `"gtk"`** so `org.freedesktop.portal.Settings` stays registered (otherwise GTK4/libadwaita apps lose dark-mode detection). `FileChooser` and `AppChooser` explicitly route to `"kde"`.
-
-### Standalone KDE / Qt Integration (No Plasma Desktop)
-- **Menu spec without Plasma bloat**: `kdeXdgMenus` in `hosts/desktop-env.nix` extracts `applications.menu` (`umbriel-applications.menu`) and `.directory` metadata with `disallowedReferences = [ pkgs.kdePackages.plasma-workspace ]` so Dolphin/KService resolves application categories without pulling Plasma into the system closure.
-- **Cascading KDE defaults**: System defaults live in `/etc/xdg/kdeglobals` and `/etc/xdg/konsolerc` (with `/share/konsole` in `environment.pathsToLink`), leaving `~/.config/*` and `~/.local/share/konsole` writable.
-- **Qt plugin path merge**: Home Manager's `qt` module writes `QT_PLUGIN_PATH` / `QML2_IMPORT_PATH` with only the user profile, masking system packages. `home/noctalia.nix` `mkForce`-combines `${config.home.profileDirectory}` and `/run/current-system/sw` (plus `NIX_XDG_DESKTOP_PORTAL_DIR`) so KF6 apps discover system-wide KIO workers, thumbnailers, and archive plugins.
-- **KSycoca cache**: Nix store `1970-01-01` timestamps stall incremental `ksycoca6` updates; `nixos-rebuild-sycoca` (pre-session user service) and `home.activation.rebuildKdeSycoca` (`home/mime.nix`, `XDG_MENU_PREFIX="umbriel-"`) force clean rebuilds.
-
-### Keyring vs SSH Agent
-- `greetd` PAM unlocks `gnome-keyring` at login, and `home/default.nix` runs `services.gnome-keyring` with `components = [ "pkcs11" "secrets" ]`.
-- **Never add `"ssh"` to `gnome-keyring` components**: `programs.gnupg.agent.enableSSHSupport = true` (`hosts/packages.nix`) owns `SSH_AUTH_SOCK`.
-
-### Flatpak Sandboxes (`home/flatpak.nix`)
-- System `services.flatpak.enable = true` (`hosts/desktop-env.nix`) pairs with `nix-flatpak` in `home/flatpak.nix`.
-- Global `services.flatpak.overrides` grant read-only access to `/nix/store` and XDG GTK/icon dirs so host themes/cursors work inside Flatpaks; apps bundling conflicting Qt runtimes must unset leaked `QT_PLUGIN_PATH` / `LD_LIBRARY_PATH` in per-app `overrides`.
-
----
+- **`{umbriel,noctalia}` & Greeter**: `programs.{umbriel,noctalia}.settings` + `noctalia-greeter.settings` serialize from Nix and run `{noctalia,umbriel} config validate` (custom Noctalia widgets also need `plugins.enabled`). `programs.umbriel.enable = true` wires `start-umbriel` → `umbriel.service` → `graphical-session.target` → HM `noctalia.service` (`noctalia.systemd.enable = true`); **never** put `"noctalia"` in `umbriel.settings.general.autostart` (no system unit). GUI edits write `~/.local/state/noctalia/settings.toml` (overrides `config.toml`); Greeter layers `/var/lib/noctalia-greeter/sync.toml` (`passwordless-sync-users = [ "fumoctl" ]`).
+- **Theme & avatar**: Keep `umbriel.settings.include.optional.files = [ "noctalia.toml" ]` exact so Noctalia writes `~/.config/umbriel/noctalia.toml` (not read-only `config.toml`). `$HOME` is `0700`, so `tmpfiles.rules` links 1:1 `dotfiles/.fumoctl.jpg` → `/var/lib/AccountsService/{icons,users}/fumoctl`.
+- **Portals (`hosts/desktop-env.nix`)**: `xdg.portal.config.umbriel` overrides `config.common` (`XDG_CURRENT_DESKTOP=Umbriel`). `portal-umbriel` only covers Screenshot/ScreenCast/InputCapture; **`default = [ "umbriel" "gtk" ]` must keep `"gtk"`** for `Settings` (GTK4 dark mode), with `{File,App}Chooser = "kde"`.
+- **KDE/Qt (no Plasma)**: `kdeXdgMenus` builds `umbriel-applications.menu` (`disallowedReferences = [ plasma-workspace ]`); `/etc/xdg/{kdeglobals,konsolerc}` (`/share/konsole` linked) sets defaults. `home/noctalia.nix` `mkForce`-merges `${config.home.profileDirectory}` + `/run/current-system/sw` in `QT_PLUGIN_PATH`/`QML2_IMPORT_PATH` (+ `NIX_XDG_DESKTOP_PORTAL_DIR`) for KF6 KIO/thumbnail/archive plugins; `nixos-rebuild-sycoca` + `rebuildKdeSycoca` (`home/mime.nix`, `XDG_MENU_PREFIX="umbriel-"`) bypass `1970-01-01` mtimes.
+- **Keyring & Flatpaks**: `greetd` PAM unlocks `gnome-keyring` (`components = [ "pkcs11" "secrets" ]`, `home/default.nix`); **never add `"ssh"`** (`gnupg.agent.enableSSHSupport = true` owns `SSH_AUTH_SOCK`). `nix-flatpak` (`home/flatpak.nix`) exposes `/nix/store` + GTK/icon dirs ro; Qt Flatpaks unset `QT_PLUGIN_PATH`, `LD_LIBRARY_PATH`, `QT_QPA_PLATFORM_PLUGIN_PATH`.
 
 ## 6. Gaming, Containers & Networking Subsystems
 
-### Gaming Wrappers & Proton Materialization (`hosts/gaming.nix`)
-- **`gs-run` & `gs-wine-wait`**: Custom Umbriel-aware `gamescope` launcher that queries `umbriel outputs --json` for focused monitor geometry/refresh/HDR/VRR, strips Steam's `LD_PRELOAD`/`LD_LIBRARY_PATH` and sets `DISABLE_LSFGVK=1` on the outer `gamescope` compositor while restoring them for the inner game process, and wraps Wine launches with `wineserver -w` + `gamescopereaper` child cleanup.
-- **Compositor direct scanout**: `home/noctalia.nix` matches `app_id = "^(gamescope|steam_app_.*|)$"` (Wayland `gamescope` clears `app_id` to `""`) with `blur = false`, `shadow = false`, and `opacity = 1.0`. Preserve this rule when editing window rules so high-refresh games are not forced through blur passes.
-- **`bottles-winetricks`**: Multi-arch `pkgs.unstable.buildFHSEnv` wrapper that resolves a Bottle's runner, seeds missing Proton `vkd3d` DLLs, and scopes runner `LD_LIBRARY_PATH` / `WINEDLLPATH` / `GST_PLUGIN_SYSTEM_PATH_1_0` strictly to `wine`/`wineserver` shims so Proton's bundled libraries do not break host GTK4 `zenity` dialogs.
-- **`syncSteamCompatTools` activation**: Materializes Nix-built Proton runners into `~/.local/share/Steam/compatibilitytools.d/<Name>` as **real outer directories containing inner symlinks** to `/nix/store`. Making the outer directory a symlink causes `Path.resolve()` in UMU/Bottles to record transient `/nix/store/<hash>` paths that break after GC.
-
-### Containers & Virtualisation (`hosts/containers.nix`)
-- **Docker + Podman coexistence invariant**: Rootful Docker and rootless Podman are both enabled, while `virtualisation.oci-containers.backend = "podman"`. **`virtualisation.podman.dockerCompat` and `dockerSocket.enable` MUST remain `false`** so `docker` and `/var/run/docker.sock` always talk to `dockerd`.
-- **Rootless `oci-containers` boot ordering**: Shared containers live in `hosts/containers.nix` and machine-specific ones in `hosts/{desktop,laptop}/containers.nix`. Any container running rootless as `fumoctl` (`podman.user = "fumoctl"`) needs its `systemd.services.podman-<name>` unit ordered `after`/`requires = [ "user@1000.service" ]` with `RequiresMountsFor` on `/run/user/1000/containers` and `/home/fumoctl/.local/share/containers` (and a `jq`-extended Podman seccomp profile if `io_uring` syscalls are used).
-- **Unpatched binaries**: `programs.nix-ld` (`hosts/packages.nix`) and `nix-alien` provide dynamic linker/library support for external binaries and emulators alongside QEMU/KVM (`libvirtd`).
-
-### Networking & Dynamic Timezone (`hosts/networking.nix` + `hosts/common.nix`)
-- **DNS & Firewall**: `NetworkManager` delegates DNS to `systemd-resolved` (DNSSEC + DoT enforced, DHCP DNS ignored, `services.unbound.enable = false`) behind an `nftables` firewall (`checkReversePath = "loose"`). VPN tunnel interfaces are whitelisted via `networking.firewall.trustedInterfaces`.
-- **GeoIP timezone**: `services.tzupdate.enable = true` dynamically updates the timezone and overrides `time.timeZone` (`config.time.timeZone` evaluates to `null` despite `lib.mkDefault`). Disable `tzupdate` if a static timezone is ever required.
-
----
+- **Gaming (`hosts/gaming.nix`)**: `gs-run` reads `umbriel outputs --json` (geometry/refresh/HDR/VRR), strips Steam `LD_PRELOAD`/`LD_LIBRARY_PATH` + sets `DISABLE_LSFGVK=1` on outer `gamescope` (restored inside), forwards `WINEPREFIX`, and wraps Wine in `gs-wine-wait` (`wineserver -w` + `gamescopereaper`); `home/noctalia.nix` sets `blur`/`shadow = false`, `opacity = 1.0` on `^(gamescope|steam_app_.*|)$`. `bottles-winetricks` (`unstable.buildFHSEnv`) seeds Proton `vkd3d` DLLs and scopes runner `LD_LIBRARY_PATH`/`WINEDLLPATH`/`GST_PLUGIN_SYSTEM_PATH_1_0` to `wine`/`wineserver` shims so host GTK4 `zenity` works. `syncSteamCompatTools` writes `~/.local/share/Steam/compatibilitytools.d/<Name>` as **real outer dirs (`.nix-managed`) of `/nix/store` symlinks** (outer symlinks pin GC-transient paths in UMU/Bottles; custom dirs stay intact).
+- **Containers (`hosts/containers.nix`)**: Rootful Docker + rootless Podman (`oci-containers.backend = "podman"`); **`podman.{dockerCompat,dockerSocket.enable}` MUST stay `false`**. `podman.user = "fumoctl"` units (`hosts/{,desktop/,laptop/}containers.nix`) need `after`/`requires = [ "user@1000.service" ]` + `RequiresMountsFor` on `{/run/user/1000,/home/fumoctl/.local/share}/containers` (+ `jq` seccomp for `io_uring`). `nix-ld`, `nix-alien`, `libvirtd` back external binaries/VMs.
+- **Networking & TZ (`hosts/{networking,common}.nix`)**: `NetworkManager` → `systemd-resolved` (DNSSEC + DoT, DHCP DNS ignored, `unbound` off) behind `nftables` (`checkReversePath = "loose"`, VPNs in `trustedInterfaces`). `tzupdate` (`timeZone = null`, `postStart`) + `activationScripts.localtime` copy `/etc/localtime` ↔ `/persist/etc/localtime` (`America/Argentina/Buenos_Aires` fallback), never symlinking into `/persist` (`systemd-timedated` `unlink()`s `/etc/localtime`).
 
 ## 7. Secrets (`sops-nix`) & Git Signing
 
-- **Master key**: Post-quantum hybrid Age key (`mlkem768x25519`) stored at `/persist/sops/fumosops.key` (`0600`, owned by `fumoctl`), exported via `SOPS_AGE_KEY_FILE` (`home/secrets.nix`), with recipient rules in `.sops.yaml` and ciphertext in `secrets/secrets.yaml`.
-- **Graceful keyless boot**: `systemd.user.services.sops-nix` sets `ConditionPathExists = "/persist/sops/fumosops.key"`, allowing fresh installs without the key to build and activate cleanly.
-- **PGP & Git signing**: `sops-import-pgp.service` imports the decrypted PGP secret key once after `sops-nix.service`. `programs.git` (`home/shell.nix`) enforces `signByDefault = true`, so local commits require `gpg-agent` + the imported key.
-
-### Common Secret Workflows
-- **Edit interactively**: `sops secrets/secrets.yaml` (decrypts in memory, re-encrypts on save). If using `sops --decrypt --in-place` for an external editor, always run `sops --encrypt --in-place secrets/secrets.yaml` and verify `ENC[AES256_GCM,...]` in `git diff` before staging.
-- **Add a secret**: Add the key in `sops secrets/secrets.yaml`, declare `sops.secrets.<name>` in `home/secrets.nix`, and either reference `config.sops.secrets.<name>.path` or export it via `sops.templates."shell-secrets.sh".content` (sourced automatically by Zsh).
-- **Re-key**: Update `.sops.yaml`, then run `sops updatekeys secrets/secrets.yaml`.
-
----
+- **Age, keyless boot & PGP**: Post-quantum `mlkem768x25519` key at `/persist/sops/fumosops.key` (`0600`, `SOPS_AGE_KEY_FILE` in `home/secrets.nix`), `.sops.yaml`, `secrets/secrets.yaml`. `sops-nix` user unit sets `ConditionPathExists` on that key for keyless installs; `sops-import-pgp.service` imports PGP; `programs.git` (`home/shell.nix`) sets `signByDefault = true`.
+- **Workflows**: Edit with `sops secrets/secrets.yaml` (if `--decrypt -i`, re-encrypt and check `ENC[AES256_GCM,...]` in `git diff`); wire `sops.secrets.<name>` + `shell-secrets.sh`; re-key via `sops updatekeys secrets/secrets.yaml`.
 
 ## 8. Antigravity MCP Servers & Skills (`home/apps.nix` + `npins/`)
 
-### MCP Servers (`home/apps.nix` → `~/.gemini/config/mcp_config.json`)
-- **Non-destructive `jq` merge**: `home.activation.antigravityMcpConfig` merges `declarativeMcp.mcpServers` into a regular `0600` `~/.gemini/config/mcp_config.json` and records Nix-managed server names in `~/.gemini/config/.nix-managed-mcp.json`. Servers added directly in the Antigravity UI/OAuth flow are preserved across rebuilds, while servers removed from `declarativeMcp` are pruned cleanly.
-- **`bunxMcp` wrapper for `@latest` npm MCPs**: Runs `bunx --silent --ignore-scripts --minimum-release-age 604800 "$@"` (7-day release cooldown against supply-chain compromises).
-  - **Must use `pkgs.unstable.bun` (`>= 1.4.4`)**: `bunx --minimum-release-age` is enforced in Bun `1.4.4+`; stable `pkgs.bun` (`1.3.13`) treats it as a silent no-op.
-  - **Must keep `pkgs.nodejs` in `runtimeInputs`**: `nodejs` is not on the global `PATH`, and npm MCP bin scripts use `#!/usr/bin/env node`.
-  - **Must keep `--silent` and omit `--` before `"$@"`**: `--silent` keeps `bunx` install logs off stdout (which would corrupt MCP JSON-RPC), and `bunx` stops parsing its own flags at the first `<pkg>@<version>` positional argument so downstream flags like `--browser chromium` or `--mcp` pass through.
-- **Playwright browser runtime**: `@playwright/mcp@latest` caches its downloaded Chromium build under `~/.cache/ms-playwright` (persisted in `hosts/impermanence.nix`) and relies on `libgbm` (`pkgs.libgbm`) in `programs.nix-ld.libraries` (`hosts/packages.nix`) alongside the rest of the graphics/GTK/NSS stack.
-- **Non-npm MCPs**: `dbcode` launches the highest-versioned VSCodium DBCode extension CLI from `~/.vscode-oss/extensions/` using `pkgs.nodejs` (updated via VSCodium); remote Streamable HTTP entries (`rivalsearch`) update server-side.
-
-### Skills & External Plugins (`dotfiles/skills/` + `npins/`)
-- **Hand-written local skills**: Drop `<name>/SKILL.md` directories in `dotfiles/skills/` (run `git add -N` on new files). `home.file.".gemini/config/skills"` links them with `recursive = true`, leaving `~/.gemini/config/skills/` writable. Do **not** place non-skill directories (such as `npins/`) inside `dotfiles/skills/`.
-- **External GitHub skill/plugin repos via `npins/`**:
-  - Pinned in root `npins/sources.json` (keeping `flake.nix` clean). `home/apps.nix` imports `(import ../npins) { }` (calling `{ }` strips `npins`'s outer `__functor`) and fetches each pin at build time via `pin { inherit pkgs; }` so pure and `--offline` flake evaluations work.
-  - `mkAntigravityPlugin` / `build-antigravity-plugin.py` automatically converts each pin into `~/.gemini/config/plugins/<name>/` (`recursive = true`, leaving `plugins/` writable for UI/Marketplace installs): discovers `skills/*/SKILL.md` and `.agents/skills/*/SKILL.md`, handles single-skill root `SKILL.md` repos (with `scripts/`, `examples/`, `resources/`, `references/`), converts Claude Code (`commands/*.md`) and Gemini CLI (`commands/*.toml`) commands into `skills/<cmd>/SKILL.md` as a fallback, synthesizes a valid `plugin.json` (including `version`), and fails the build if zero skills are found. Every skill exposes `/<skill-name>` natively in Antigravity.
-
-### Common MCP & Skill Workflows
-- **Add or edit an MCP server**: Edit `declarativeMcp.mcpServers` in `home/apps.nix` (use `command = lib.getExe bunxMcp;` and `<pkg>@latest` in `args` for npm servers) → `nh os switch` → reload/restart Antigravity.
-- **Add an external skill/plugin repo** (no `.nix` edits needed): `npins add github <owner> <repo>` (pass `--branch main` for repos without GitHub Releases) → `nh os switch`.
-- **Update external skills**: `npins update` (or `npins update <name>`) → `nh os switch`.
-- **Remove an external skill repo**: `npins remove <name>` → `nh os switch`.
-- **Validate a plugin**: `agy plugin validate --strict ~/.gemini/config/plugins/<name>` (or against its built `/nix/store/...-antigravity-plugin-<name>` derivation).
-
----
+- **MCP (`antigravityMcpConfig`)**: Merges `declarativeMcp.mcpServers` into `0600` `~/.gemini/config/mcp_config.json` using `.nix-managed-mcp.json` (preserves UI/OAuth keys, prunes stale Nix keys, aborts on invalid JSON).
+- **`bunxMcp`**: `bunx --silent --ignore-scripts --minimum-release-age 604800 "$@"` on `pkgs.unstable.bun` (`>= 1.4.4`; `1.3.13` ignores cooldown) + `nodejs` (`#!/usr/bin/env node`); keep `--silent` (JSON-RPC stdout) and no `--` before `"$@"`. `@playwright/mcp` uses persisted `~/.cache/ms-playwright` + `libgbm` in `nix-ld`; `dbcode` runs `~/.vscode-oss/extensions/dbcode.dbcode-*`; `rivalsearch` uses Streamable HTTP.
+- **Skills & `npins`**: Local `<name>/SKILL.md` dirs live in `dotfiles/skills/` (`git add -N`, `.gemini/config/skills` `recursive = true`; non-skill subdirs fail checks). `npins/sources.json` (`npins {add github <owner> <repo>,update [name],remove <name>}`) loads via `(import ../npins) { }` / `pin { inherit pkgs; }`; `mkAntigravityPlugin` maps `{,.agents/}skills/*/SKILL.md`, root `SKILL.md`, or `commands/*.{md,toml}` to `~/.gemini/config/plugins/<name>/`, synthesizes `plugin.json`, fails on 0 skills, and runs `agy plugin validate --strict "$out"`.
 
 ## 9. Conventions & Placement Guide
 
-### Where Changes Go
-
-| Change Type | Target File |
-| :--- | :--- |
-| Shared NixOS / kernel / boot / user / `nh` setting | `hosts/common.nix` (or domain module in `hosts/*.nix`) |
-| Host-specific hardware, kernel, GPU, Secure Boot | `hosts/desktop/default.nix` or `hosts/laptop/default.nix` |
-| Persisted system or `$HOME` state | `hosts/impermanence.nix` |
-| Compositor, bar, lockscreen, GTK/Qt/cursor theming | `hosts/desktop-env.nix` (system/greeter/portals) & `home/noctalia.nix` (HM) |
-| System CLI / admin / `nix-ld` libraries | `hosts/packages.nix` |
-| Antigravity MCP servers & skills/plugins | `home/apps.nix`, `dotfiles/skills/`, `npins/sources.json` |
-| User GUI/dev apps, shell/Git/SSH, Flatpaks, MIME | `home/apps.nix`, `home/shell.nix`, `home/flatpak.nix`, `home/mime.nix` |
-| OCI containers | `hosts/containers.nix` (shared) or `hosts/{desktop,laptop}/containers.nix` |
-| SOPS secrets & env templates | `secrets/secrets.yaml` + `home/secrets.nix` |
-
-### Coding & Git Rules
-- **Formatting**: Format all Nix code with RFC-style `nixfmt` (`nixfmt $(git ls-files '*.nix')`).
-- **Module headers & paths**: Keep module argument sets minimal (`inputs` is always passed via `specialArgs` / `extraSpecialArgs`). Use `lib.mkDefault` for options hosts may override, `${pkgs.foo}/bin/foo` or `lib.getExe` in scripts/hooks (never hardcode `/run/current-system/sw/bin/...`), and `lib.hm.dag.entryAfter [ "writeBoundary" ]` for HM activation scripts.
-- **Preserve "why" comments**: Keep architectural inline comments (portal fallback, keyring SSH exclusion, Umbriel session startup, Docker/Podman socket split, KConfig symlinks, Proton directory materialization) intact when editing nearby code.
-- **State versions**: Keep `system.stateVersion = "26.05"` and `home.stateVersion = "26.05"` untouched.
-- **Untracked files in flakes**: Always run `git add -N <path>` on newly created files before evaluating or building the flake, or Nix will ignore them.
-- **Commits**: Keep commit messages short, lowercase, and informal (matching `git log`); do not use Conventional Commit prefixes or add AI/co-author trailers unless asked. Commit `flake.lock` whenever `flake.nix` inputs change, and commit `npins/sources.json` when pinned skills/plugins change.
-
----
+- **Placement**: Shared OS/boot/`nh`/tz: `hosts/common.nix` (`hosts/*.nix`); host HW/kernel/GPU/SB: `hosts/{desktop,laptop}/default.nix`; state: `hosts/impermanence.nix`; WM/bar/greeter/portals/Qt/GTK: `hosts/desktop-env.nix` + `home/noctalia.nix`; CLI/`nix-ld`/GPG: `hosts/packages.nix`; MCP/skills/plugins: `home/apps.nix`, `dotfiles/skills/`, `npins/`; apps/shell/Flatpaks/MIME: `home/{apps,shell,flatpak,mime}.nix`; OCI: `hosts/{,desktop/,laptop/}containers.nix`; secrets: `secrets/secrets.yaml` + `home/secrets.nix`; script tests: `flake.nix` (`checks.x86_64-linux.scripts`).
+- **Code, Tests & Git**: Run `nixfmt $(git ls-files '*.nix')`. Keep module args minimal (`inputs` via `{,extra}SpecialArgs`), use `lib.mkDefault`, `${pkgs.foo}/bin/foo` or `lib.getExe` (never `/run/current-system/sw/bin/...`), and `entryAfter [ "writeBoundary" ]` in `home.activation`. Add/update a test in `checks.x86_64-linux.scripts` for any new/modified script, `jq`/`sed`/`awk` pipeline, wrapper, or activation/systemd hook Nix eval/rebuilds could miss. Keep inline "why" comments, `stateVersion = "26.05"`, `git add -N` new files before eval, and short lowercase commits (no Conventional Commits/AI trailers; commit `flake.lock`/`npins/sources.json` with updates).
 
 ## 10. Verification Checklist
 
-Never claim a configuration change works without evaluating both hosts:
+Evaluate both hosts and build `checks.x86_64-linux.scripts` (mandatory for any runtime/script/hook logic) before completion:
 
 ```bash
-# 1. Stage intent for any new files & verify no plaintext secrets
-git status --short && git diff secrets/
-
-# 2. Check Nix formatting across the repository
+git status --short && git diff secrets/ && test "$(wc -c < AGENTS.md)" -lt 16000
 nixfmt --check $(git ls-files '*.nix')
-
-# 3. Evaluate BOTH host system derivations
 nix eval --raw .#nixosConfigurations.ultix-desktop.config.system.build.toplevel.drvPath
 nix eval --raw .#nixosConfigurations.ultix-laptop.config.system.build.toplevel.drvPath
-
-# 4. Spot-check specific NixOS or Home Manager options as needed
-nix eval --json .#nixosConfigurations.ultix-desktop.config.<option.path>
-nix eval --json .#nixosConfigurations.ultix-desktop.config.home-manager.users.fumoctl.<option.path>
-
-# 5. Build / apply (use `boot` instead of `switch` for initrd, disko, impermanence, or bootloader edits)
-nh os switch                         # auto-selects nixosConfigurations.$(hostname)
-sudo nixos-rebuild switch --flake .#ultix-desktop
-sudo nixos-rebuild switch --flake .#ultix-laptop
+nix build --no-link .#checks.x86_64-linux.scripts # mandatory for scripts/hooks; or `nix flake check`
+nh os switch                                      # `boot` for initrd/disko/impermanence/bootloader
 ```
 
-> **Sandboxed environments**: If `nix eval` fails with `attempt to write a readonly database (... fetcher-cache-v4.sqlite)`, run with `XDG_CACHE_HOME=$(mktemp -d) nix --offline eval ...`.
+> **Sandboxes**: Use `XDG_CACHE_HOME=$(mktemp -d) nix --offline ...` if `fetcher-cache-v4.sqlite` is read-only.

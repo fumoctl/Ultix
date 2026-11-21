@@ -40,6 +40,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       home-manager,
       disko,
@@ -69,5 +70,113 @@
         ultix-desktop = mkHost ./hosts/desktop;
         ultix-laptop = mkHost ./hosts/laptop;
       };
+
+      checks.${system}.scripts =
+        let
+          desktop = self.nixosConfigurations.ultix-desktop;
+          inherit (desktop) pkgs;
+          inherit (pkgs) lib;
+          hmCfg = desktop.config.home-manager.users.fumoctl;
+          pluginSources = lib.mapAttrsToList (_: v: v.source) (
+            lib.filterAttrs (k: _: lib.hasPrefix ".gemini/config/plugins/" k) hmCfg.home.file
+          );
+          skillsSource = hmCfg.home.file.".gemini/config/skills".source;
+          gsRun = lib.findFirst (
+            p: (p.pname or p.name or "") == "gs-run"
+          ) null desktop.config.environment.systemPackages;
+          mcpAct = pkgs.writeShellScript "antigravity-mcp-act" ''
+            set -euo pipefail
+            ${hmCfg.home.activation.antigravityMcpConfig.data}
+          '';
+          steamAct = pkgs.writeShellScript "steam-compat-act" ''
+            set -euo pipefail
+            ${hmCfg.home.activation.syncSteamCompatTools.data}
+          '';
+        in
+        pkgs.runCommandLocal "ultix-checks" { nativeBuildInputs = [ pkgs.jq ]; } ''
+          set -euo pipefail
+          unset WAYLAND_DISPLAY UMBRIEL_SOCKET XDG_DATA_HOME
+          TMP="$(mktemp -d)"
+
+          # 1. Antigravity plugins (npins) and local skills layout
+          for p in ${lib.escapeShellArgs pluginSources}; do
+            test -f "$p/plugin.json"
+            found=0
+            for s in "$p"/skills/*/SKILL.md; do
+              if [ -f "$s" ]; then found=1; fi
+            done
+            test "$found" -eq 1
+          done
+          for d in "${skillsSource}"/* "${skillsSource}"/.[!.]* "${skillsSource}"/..?*; do
+            [ -d "$d" ] || continue
+            test -f "$d/SKILL.md"
+          done
+
+          # 2. gs-run scaling/filter flags and WINEPREFIX forwarding to gs-wine-wait
+          gsOut="$(${lib.getExe gsRun} --dry-run --16:9 --fsr --scale 0.75 -- fake-game)"
+          [[ "$gsOut" == *"-w 1440 -h 810"* && "$gsOut" == *"-F fsr"* ]]
+
+          mkdir -p "$TMP/bin"
+          printf '#!${pkgs.runtimeShell}\nexit 0\n' > "$TMP/bin/wine"
+          printf '#!${pkgs.runtimeShell}\necho "$1=''${WINEPREFIX:-}" >> "$TMP/ws.log"\n' > "$TMP/bin/wineserver"
+          printf '#!${pkgs.runtimeShell}\nexec "$@"\n' > "$TMP/bin/mangohud"
+          chmod +x "$TMP/bin/wine" "$TMP/bin/wineserver" "$TMP/bin/mangohud"
+          wineOut="$(${lib.getExe gsRun} --dry-run mangohud env WINEPREFIX=/tmp/custom-pfx "$TMP/bin/wine" game.exe)"
+          [[ "$wineOut" == *gs-wine-wait* && "''${wineOut%% mangohud *}" == *"/tmp/custom-pfx"* ]]
+          TMP="$TMP" PATH="$TMP/bin:$PATH" eval "''${wineOut#* -- }"
+          grep -Fxq -- "-w=/tmp/custom-pfx" "$TMP/ws.log"
+
+          # 3. antigravityMcpConfig fresh creation, merge/prune/shape-replace, and corrupt-file guard
+          mcpHome="$TMP/mcp-home"
+          mcpCfg="$mcpHome/.gemini/config/mcp_config.json"
+          mcpState="$mcpHome/.gemini/config/.nix-managed-mcp.json"
+          HOME="$mcpHome" ${mcpAct}
+          test "$(stat -c '%a' "$mcpCfg")" = "600"
+          test -f "$mcpState"
+
+          printf '%s\n' '["staleNix","rivalsearch"]' > "$mcpState"
+          cat > "$mcpCfg" <<'EOF'
+          {
+            "mcpServers": {
+              "customUser": { "command": "/bin/custom" },
+              "staleNix": { "command": "/bin/stale" },
+              "rivalsearch": { "command": "/bin/old-rival", "args": ["--old"] }
+            }
+          }
+          EOF
+          HOME="$mcpHome" ${mcpAct}
+          test "$(stat -c '%a' "$mcpCfg")" = "600"
+          jq -e '
+            .mcpServers.customUser.command == "/bin/custom"
+            and (.mcpServers | has("staleNix") | not)
+            and (.mcpServers.rivalsearch.serverUrl | type == "string" and length > 0)
+            and (.mcpServers.rivalsearch | has("command") | not)
+            and (.mcpServers.rivalsearch | has("args") | not)
+          ' "$mcpCfg" >/dev/null
+
+          printf '{malformed\n' > "$mcpCfg"
+          cp "$mcpCfg" "$TMP/malformed.orig"
+          if HOME="$mcpHome" ${mcpAct} 2>/dev/null; then
+            exit 1
+          fi
+          cmp -s "$mcpCfg" "$TMP/malformed.orig"
+
+          # 4. syncSteamCompatTools stale cleanup, unmanaged preservation, and .nix-managed markers
+          steamHome="$TMP/steam-home"
+          compatDir="$steamHome/.local/share/Steam/compatibilitytools.d"
+          mkdir -p "$compatDir/Stale-Proton" "$compatDir/Custom-Proton"
+          touch "$compatDir/Stale-Proton/.nix-managed" "$compatDir/Custom-Proton/marker"
+          HOME="$steamHome" ${steamAct}
+          test ! -e "$compatDir/Stale-Proton"
+          test -f "$compatDir/Custom-Proton/marker"
+          for r in Proton-CachyOS Proton-GE GE-Proton9-12; do
+            test -d "$compatDir/$r" && test ! -L "$compatDir/$r"
+            test -f "$compatDir/$r/.nix-managed"
+            test -f "$compatDir/$r/compatibilitytool.vdf"
+            test -x "$compatDir/$r/proton"
+          done
+
+          touch "$out"
+        '';
     };
 }

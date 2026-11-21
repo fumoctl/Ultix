@@ -375,21 +375,28 @@ let
       done
 
       wineserver_bin=""
+      wineprefix_arg=""
       for arg in "$@"; do
         case "$arg" in
+          WINEPREFIX=*)
+            wineprefix_arg="$arg"
+            ;;
           */wine | */wine64)
-            if [ -x "''${arg%/*}/wineserver" ]; then
+            if [ -z "$wineserver_bin" ] && [ -x "''${arg%/*}/wineserver" ]; then
               wineserver_bin="''${arg%/*}/wineserver"
-              break
             fi
             ;;
           wine | wine64)
-            if wineserver_bin="$(command -v wineserver 2>/dev/null)" && [ -n "$wineserver_bin" ]; then
-              break
+            if [ -z "$wineserver_bin" ]; then
+              wineserver_bin="$(command -v wineserver 2>/dev/null || true)"
             fi
             ;;
         esac
       done
+
+      if [ -n "$wineserver_bin" ] && [ -n "$wineprefix_arg" ]; then
+        inner_env+=("$wineprefix_arg")
+      fi
 
       inner_cmd=(env)
       if [ -z "$saved_disable_lsfgvk" ]; then
@@ -497,14 +504,23 @@ let
       bottles_root="''${XDG_DATA_HOME:-$HOME/.local/share}/bottles"
       bottles_dir="$bottles_root/bottles"
 
+      yaml_field() {
+        local val
+        val="$(sed -n "/^$1:/{s/^$1:[[:space:]]*//;s/[[:space:]]*$//;p;q;}" "$2")"
+        if [[ "''${#val}" -ge 2 && ( "$val" == \"*\" || "$val" == \'*\' ) ]]; then
+          val="''${val:1:-1}"
+        fi
+        printf '%s\n' "$val"
+      }
+
       list_bottles() {
         shopt -s nullglob
         local found=0
         for yml in "$bottles_dir"/*/bottle.yml; do
           local dir name runner
           dir="$(dirname "$yml")"
-          name="$(sed -n "s/^Name:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
-          runner="$(sed -n "s/^Runner:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+          name="$(yaml_field Name "$yml")"
+          runner="$(yaml_field Runner "$yml")"
           printf '  %s (dir: %s, runner: %s)\n' "''${name:-$(basename "$dir")}" "$(basename "$dir")" "''${runner:-unknown}"
           found=1
         done
@@ -544,7 +560,7 @@ let
       else
         shopt -s nullglob
         for yml in "$bottles_dir"/*/bottle.yml; do
-          name="$(sed -n "s/^Name:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+          name="$(yaml_field Name "$yml")"
           if [[ "$name" == "$target" ]]; then
             bottle_path="$(dirname "$yml")"
             break
@@ -559,8 +575,8 @@ let
       fi
 
       yml="$bottle_path/bottle.yml"
-      runner="$(sed -n "s/^Runner:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
-      runner_path="$(sed -n "s/^RunnerPath:[[:space:]]*['\"]\\?\\([^'\"]*\\)['\"]\\?$/\\1/p" "$yml" | head -n1)"
+      runner="$(yaml_field Runner "$yml")"
+      runner_path="$(yaml_field RunnerPath "$yml")"
 
       resolved_runner=""
       for candidate in \
@@ -850,16 +866,28 @@ in
         ''
           compat_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/Steam/compatibilitytools.d"
           mkdir -p "$compat_dir"
+          for d in "$compat_dir"/*/; do
+            if [ -f "''${d}.nix-managed" ]; then
+              rm -rf "$d"
+            fi
+          done
+          # `makeSteamCompatTool` packages put a warning file in `out` and the actual
+          # runner directory in `steamcompattool`.
           for pair in \
-            "Proton-CachyOS:${pkgs.proton-cachyos-bin_edge}" \
-            "Proton-GE:${pkgs.proton-ge-bin_edge}" \
+            "Proton-CachyOS:${pkgs.proton-cachyos-bin_edge.steamcompattool}" \
+            "Proton-GE:${pkgs.proton-ge-bin_edge.steamcompattool}" \
             "GE-Proton9-12:${proton-ge-9-12}"; do
             name="''${pair%%:*}"
             src="''${pair#*:}"
+            if [ ! -f "$src/compatibilitytool.vdf" ]; then
+              echo "syncSteamCompatTools: missing compatibilitytool.vdf in $src ($name)" >&2
+              exit 1
+            fi
             dest="$compat_dir/$name"
             rm -rf "$dest"
             mkdir -p "$dest"
             ln -s "$src"/* "$dest"/
+            touch "$dest/.nix-managed"
           done
         '';
   };
