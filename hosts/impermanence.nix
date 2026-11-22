@@ -104,6 +104,8 @@
         # Application config (~/.config)
         ".config/BraveSoftware"
         ".config/VSCodium"
+        ".config/JetBrains"
+        ".config/.android"
         ".config/discord"
         ".config/dconf"
         ".config/gh"
@@ -114,7 +116,6 @@
         ".config/MangoHud"
         ".config/AmneziaVPN.ORG"
         ".config/Podman Desktop"
-        ".config/.android"
         ".config/Windscribe"
         ".config/onlyoffice"
         ".config/betterstremio"
@@ -122,6 +123,7 @@
         # Application data & state (~/.local)
         ".local/share/Steam"
         ".local/share/bottles"
+        ".local/share/Android"
         ".local/share/umu"
         ".local/share/containers"
         ".local/share/direnv"
@@ -138,6 +140,7 @@
         ".local/share/Windscribe"
         ".local/share/nix"
         ".local/share/uv"
+        ".local/share/JetBrains"
         ".local/state/noctalia"
         ".local/state/portal-screen-mirror"
         ".local/state/wireplumber"
@@ -147,6 +150,7 @@
         # Caches & Flatpak user state
         ".cache/bun"
         ".cache/uv"
+        ".cache/JetBrains"
         ".cache/ms-playwright"
         ".cache/winetricks"
         ".var/app"
@@ -165,6 +169,7 @@
         ".npm"
         ".cargo"
         ".rustup"
+        ".pub-cache"
 
         # Credential directories
         {

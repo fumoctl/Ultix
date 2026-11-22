@@ -7,6 +7,10 @@
 }:
 
 {
+  imports = [
+    inputs.idea-nixos.homeModules.default
+  ];
+
   home.packages = with pkgs; [
     # Editors & AI coding tools
     google-antigravity
@@ -50,9 +54,28 @@
     mutableExtensionsDir = true;
   };
 
+  programs.intellij = {
+    enable = true;
+    nix.enable = true;
+    rust.enable = true;
+    android.enable = true;
+    flutter.enable = true;
+    go.enable = true;
+    python.enable = true;
+    nodejs.enable = true;
+    plugins = [
+      "com.github.catppuccin.jetbrains"
+      "com.github.catppuccin.jetbrains_icons"
+      "com.intellij.air"
+    ];
+  };
+
   programs.mpv = {
     enable = true;
-    scripts = with pkgs.mpvScripts; [ uosc sponsorblock ];
+    scripts = with pkgs.mpvScripts; [
+      uosc
+      sponsorblock
+    ];
     config = {
       profile = "high-quality";
       cache-default = 4000000;

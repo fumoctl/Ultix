@@ -22,6 +22,7 @@
     portal-screen-mirror.url = "github:fumoctl/portal-screen-mirror";
     betterstremio.url = "github:fumoctl/BetterStremio/v1.2.2";
     antigravity-nix.url = "github:jacopone/antigravity-nix";
+    idea-nixos.url = "github:fumoctl/IDEA-nixos";
   };
 
   nixConfig = {
@@ -119,6 +120,22 @@
             set -euo pipefail
             ${hmCfg.home.activation.configureGearLeverDir.data}
           '';
+          flutterSdkAct = pkgs.writeShellScript "intellij-flutter-sdk-act" (
+            "set -euo pipefail\n"
+            + builtins.unsafeDiscardStringContext (
+              builtins.replaceStrings
+                [
+                  "${hmCfg.programs.intellij.flutter.package}"
+                  hmCfg.programs.intellij.flutter.sdkPath
+                ]
+                [
+                  "$FAKE_FLUTTER_PKG"
+                  "$FLUTTER_SDK_OUT"
+                ]
+                hmCfg.home.activation.intellij-flutter-sdk.data
+            )
+          );
+          ideaWrapperCmd = builtins.unsafeDiscardStringContext hmCfg.programs.intellij.finalPackage.buildCommand;
           cleanRootAct = pkgs.writeShellScript "impermanence-clean-root-act" (
             builtins.replaceStrings [ "/btrfs_tmp" ] [ "$BTRFS_TMP" ]
               desktop.config.boot.initrd.systemd.services.impermanence-clean-root.script
@@ -453,6 +470,25 @@
               exit 1
             fi
             cmp -s "$glKeyfile" "$TMP/gl-malformed.orig"
+
+            # 8. IntelliJ wrapper script syntax/env and non-Nix-store Flutter SDK link hook
+            printf '%s\n' ${lib.escapeShellArg ideaWrapperCmd} | ${pkgs.bash}/bin/bash -n
+            for marker in SSL_CERT_FILE NIX_SSL_CERT_FILE JAVA_HOME ANDROID_JAVA_HOME rustup bun nodejs FLUTTER_ROOT GOROOT NIX_LD_LIBRARY_PATH QT_XKB_CONFIG_ROOT; do
+              grep -Fq "$marker" <<<${lib.escapeShellArg ideaWrapperCmd}
+            done
+            fakeFlutter="$TMP/fake-flutter"
+            sdkOut="$TMP/flutter-sdk"
+            mkdir -p "$fakeFlutter/bin" "$fakeFlutter/packages" "$fakeFlutter/.git" "$sdkOut"
+            touch "$fakeFlutter/bin/flutter" "$fakeFlutter/version" "$fakeFlutter/.git/HEAD"
+            ln -s "$TMP/nonexistent" "$sdkOut/stale-entry"
+            FAKE_FLUTTER_PKG="$fakeFlutter" FLUTTER_SDK_OUT="$sdkOut" ${flutterSdkAct}
+            test -d "$sdkOut" && test ! -L "$sdkOut"
+            test ! -L "$sdkOut/stale-entry"
+            test -L "$sdkOut/bin" && test -f "$sdkOut/bin/flutter"
+            test -L "$sdkOut/version"
+            test -L "$sdkOut/.git" && test -f "$sdkOut/.git/HEAD"
+            FAKE_FLUTTER_PKG="$fakeFlutter" FLUTTER_SDK_OUT="$sdkOut" ${flutterSdkAct}
+            test ! -L "$sdkOut/.git/.git"
 
             touch "$out"
           '';
