@@ -66,6 +66,8 @@
     plugins = [
       "com.github.catppuccin.jetbrains"
       "com.github.catppuccin.jetbrains_icons"
+      "indent-rainbow.indent-rainbow"
+      "izhangzhihao.rainbow.brackets.lite"
       "com.intellij.air"
     ];
   };
