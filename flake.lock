@@ -350,11 +350,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1795365349,
-        "narHash": "sha256-N8ksGtBIGLCKyuUgk4dviPhZdkh5hCNeEDq1DKnabpg=",
+        "lastModified": 1795371639,
+        "narHash": "sha256-dnLMqamYHbQ6FZVhTpk2ulnZD1faiPBPkq1/0wrpF9E=",
         "owner": "fumoctl",
         "repo": "IDEA-nixos",
-        "rev": "f6e90637af1dc3702d31dfdb65a3b773a5fb6350",
+        "rev": "62974abf4c918a02e6cf01922580c9d420e4c99c",
         "type": "github"
       },
       "original": {
@@ -495,7 +495,7 @@
         "systems": "systems_3"
       },
       "locked": {
-        "lastModified": 1795224810,
+        "lastModified": 1795259076,
         "narHash": "sha256-VWuPWde1tAAD0Tu4KA2ZfhW6nhk9x/tkbv0hi47v1R8=",
         "owner": "nix-community",
         "repo": "nix-jetbrains-plugins",

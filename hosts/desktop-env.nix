@@ -157,6 +157,7 @@ in
     GDK_BACKEND = "wayland,x11,*";
     SDL_VIDEODRIVER = "wayland";
     CLUTTER_BACKEND = "wayland";
+    _JAVA_AWT_WM_NONREPARENTING = "1";
     DICPATH = "/run/current-system/sw/share/hunspell";
   };
 

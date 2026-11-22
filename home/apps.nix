@@ -15,6 +15,18 @@
     # Editors & AI coding tools
     google-antigravity
     google-antigravity-cli
+    # IDEA 2026.2's `-Dawt.toolkit.name=auto` picks WLToolkit on Wayland, where
+    # dynamic completion popups (e.g. `/plan` slash suggestions) intermittently
+    # spawn as tiled `xdg_toplevel` windows and steal focus (JBR-10561/JBR-7521).
+    # `IJ_JAVA_OPTIONS` overrides `auto` after reading `~/.config/.../idea64.vmoptions`.
+    # shortcut: pins IDEA to XToolkit on XWayland, drop once JBR-10561 / WLToolkit popups are fixed upstream
+    (lib.hiPrio (
+      writeShellScriptBin "idea" ''
+        export _JAVA_AWT_WM_NONREPARENTING="''${_JAVA_AWT_WM_NONREPARENTING-1}"
+        export IJ_JAVA_OPTIONS="''${IJ_JAVA_OPTIONS--Dawt.toolkit.name=XToolkit}"
+        exec "${lib.getExe config.programs.intellij.finalPackage}" "$@"
+      ''
+    ))
 
     # --- LaTeX ---
     # Full TeX Live (pdflatex/xelatex/lualatex, biber, latexmk, synctex, every package).

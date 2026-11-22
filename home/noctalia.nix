@@ -320,6 +320,7 @@ in
         QT_QPA_PLATFORMTHEME = "kde";
         XCURSOR_THEME = "Bibata-Modern-Ice";
         XCURSOR_SIZE = "24";
+        _JAVA_AWT_WM_NONREPARENTING = "1";
       };
 
       input = {
