@@ -104,7 +104,6 @@
         # Application config (~/.config)
         ".config/BraveSoftware"
         ".config/VSCodium"
-        ".config/JetBrains"
         ".config/.android"
         ".config/discord"
         ".config/dconf"
@@ -140,7 +139,6 @@
         ".local/share/Windscribe"
         ".local/share/nix"
         ".local/share/uv"
-        ".local/share/JetBrains"
         ".local/state/noctalia"
         ".local/state/portal-screen-mirror"
         ".local/state/wireplumber"
@@ -150,7 +148,6 @@
         # Caches & Flatpak user state
         ".cache/bun"
         ".cache/uv"
-        ".cache/JetBrains"
         ".cache/ms-playwright"
         ".cache/winetricks"
         ".var/app"
