@@ -52,7 +52,7 @@
   programs.mpv = {
     enable = true;
     scripts = with pkgs.mpvScripts; [
-      
+
     ];
     config = {
       profile = "high-quality";
@@ -278,6 +278,9 @@
           };
           rivalsearch = {
             serverUrl = "https://RivalSearchMCP.fastmcp.app/mcp";
+          };
+          sidemu = {
+            serverUrl = "http://127.0.0.1:45821/mcp";
           };
         };
       };
