@@ -741,11 +741,11 @@
         "nixpkgs": "nixpkgs_13"
       },
       "locked": {
-        "lastModified": 1795450608,
-        "narHash": "sha256-L+p8mGNy9YyHGWwhppE9wV86idTgz+AjeZ37eCxCOK8=",
+        "lastModified": 1795451438,
+        "narHash": "sha256-j14ub8niHixcubI2MaahYGUki2YS2gqMAOJFChVs8UU=",
         "owner": "fumoctl",
         "repo": "windscribe-nix",
-        "rev": "349acb86437f6558c2d52fe42ee737b45b5d141e",
+        "rev": "16bcb5f87431a1a5631f02fff64deb7a928dac5d",
         "type": "github"
       },
       "original": {
