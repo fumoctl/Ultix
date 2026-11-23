@@ -18,7 +18,7 @@
     noctalia-greeter.url = "github:noctalia-dev/noctalia-greeter";
     lsfg-vk.url = "github:Daaboulex/lsfg-vk-nix";
     nix-alien.url = "github:thiagokokada/nix-alien";
-    windscribe-nixos.url = "github:fumoctl/windscribe-nixos";
+    windscribe-nix.url = "github:fumoctl/windscribe-nix";
     portal-screen-mirror.url = "github:fumoctl/portal-screen-mirror";
     antigravity-nix.url = "github:jacopone/antigravity-nix";
   };

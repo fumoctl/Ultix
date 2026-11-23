@@ -4,7 +4,7 @@
 }:
 
 {
-  imports = [ inputs.windscribe-nixos.nixosModules.windscribe ];
+  imports = [ inputs.windscribe-nix.nixosModules.default ];
 
   networking = {
     nftables.enable = true;
@@ -65,5 +65,6 @@
   programs.windscribe = {
     enable = true;
     users = [ "fumoctl" ];
+    autoStart = false; # optional
   };
 }

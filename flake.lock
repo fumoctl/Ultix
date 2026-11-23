@@ -448,11 +448,11 @@
     },
     "nixpkgs_13": {
       "locked": {
-        "lastModified": 1780749050,
-        "narHash": "sha256-3av0pIjlOWQ6rDbNOmpUSvbNnJkGORQKKjb4LtCZsIY=",
+        "lastModified": 1795234589,
+        "narHash": "sha256-f/VVvxf5RsQgWVhUtefoca5ktVg0DA2bnkMOcmSnozo=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a799d3e3886da994fa307f817a6bc705ae538eeb",
+        "rev": "2786a2a72088ecf32aea5b3ec52099e6a7cff78f",
         "type": "github"
       },
       "original": {
@@ -653,7 +653,7 @@
         "portal-screen-mirror": "portal-screen-mirror",
         "sops-nix": "sops-nix",
         "umbriel": "umbriel",
-        "windscribe-nixos": "windscribe-nixos"
+        "windscribe-nix": "windscribe-nix"
       }
     },
     "sops-nix": {
@@ -716,27 +716,6 @@
         "type": "github"
       }
     },
-    "treefmt-nix": {
-      "inputs": {
-        "nixpkgs": [
-          "windscribe-nixos",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1780220602,
-        "narHash": "sha256-eynAfOmbmxJnkp7YewvCEbShNnnYJ9gLLqkzsYtBPeM=",
-        "owner": "numtide",
-        "repo": "treefmt-nix",
-        "rev": "db947814a175b7ca6ded66e21383d938df01c227",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "treefmt-nix",
-        "type": "github"
-      }
-    },
     "umbriel": {
       "inputs": {
         "nixpkgs": "nixpkgs_12",
@@ -757,22 +736,21 @@
         "type": "github"
       }
     },
-    "windscribe-nixos": {
+    "windscribe-nix": {
       "inputs": {
-        "nixpkgs": "nixpkgs_13",
-        "treefmt-nix": "treefmt-nix"
+        "nixpkgs": "nixpkgs_13"
       },
       "locked": {
-        "lastModified": 1793732649,
-        "narHash": "sha256-hyukamaDdlkLXjcACUyE30+2LJMdxu6HC9GF0GuL1NQ=",
+        "lastModified": 1795450608,
+        "narHash": "sha256-L+p8mGNy9YyHGWwhppE9wV86idTgz+AjeZ37eCxCOK8=",
         "owner": "fumoctl",
-        "repo": "windscribe-nixos",
-        "rev": "8c9918c0368c0381f4a2c8f2664e30699001be0d",
+        "repo": "windscribe-nix",
+        "rev": "349acb86437f6558c2d52fe42ee737b45b5d141e",
         "type": "github"
       },
       "original": {
         "owner": "fumoctl",
-        "repo": "windscribe-nixos",
+        "repo": "windscribe-nix",
         "type": "github"
       }
     },
