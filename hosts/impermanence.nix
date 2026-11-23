@@ -117,7 +117,6 @@
         ".config/Podman Desktop"
         ".config/Windscribe"
         ".config/onlyoffice"
-        ".config/betterstremio"
 
         # Application data & state (~/.local)
         ".local/share/Steam"
@@ -128,7 +127,6 @@
         ".local/share/direnv"
         ".local/share/flatpak"
         ".local/share/applications"
-        ".local/share/betterstremio"
         ".local/share/keyrings"
         ".local/share/Trash"
         ".local/share/dolphin"
@@ -157,7 +155,6 @@
         ".duckdb"
         ".agents"
         ".steam"
-        ".stremio-server"
         ".gemini"
         ".m2"
         ".gradle"

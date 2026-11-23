@@ -20,7 +20,6 @@
     nix-alien.url = "github:thiagokokada/nix-alien";
     windscribe-nixos.url = "github:fumoctl/windscribe-nixos";
     portal-screen-mirror.url = "github:fumoctl/portal-screen-mirror";
-    betterstremio.url = "github:fumoctl/BetterStremio/v1.2.2";
     antigravity-nix.url = "github:jacopone/antigravity-nix";
   };
 
