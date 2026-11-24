@@ -32,10 +32,10 @@ let
   #      Renders at 75% internal resolution and upscales to native via AMD FSR 1.0.
   #
   # 4. Frame Generation (`lsfg-vk`) + MangoHud:
-  #    - Native-aspect 3D games: LSFGVK_PROFILE="performance" mangohud %command%
+  #    - Native-aspect 3D games: LSFGVK_PROFILE="default" mangohud %command%
   #      (Preferred whenever you don't need gamescope scaling/aspect clamping:
   #      avoids nested XWM swapchain frame drops with lsfg-vk's vsync pacing.)
-  #    - Inside gs-run:          gs-run --mangoapp env LSFGVK_PROFILE="performance" %command%
+  #    - Inside gs-run:          gs-run --mangoapp env LSFGVK_PROFILE="default" %command%
   #      Keep `env LSFGVK_PROFILE=...` *after* `gs-run` so `lsfg-vk` only hooks the
   #      game inside gamescope, not gamescope's own Vulkan compositor.
   # Runs a Wine command inside gamescope and waits on `wineserver -w` afterwards
@@ -44,6 +44,15 @@ let
   # `gamescopereaper` to SIGTERM the spawned game. Also reaps any leftover
   # `ntsync` helper processes (`winedevice.exe`) attached to `gamescopereaper`
   # when the session ends.
+
+  # THE FINALS/Deadlock/CS2/etc (keep game vsync on, mangohud fps limit = a bit below half screen refresh rate 200hz=96limit)
+  # gs-run --vrr --force-grab-cursor -- env MANGOHUD_CONFIG="read_cfg,no_display,fps_limit=96,fps_limit_method=early" LSFGVK_PROFILE="default" mangohud %command%
+  # add MESA_LOADER_DRIVER_OVERRIDE=zink inside gs-run if your game uses opengl to translate it to vulkan first so lsfg-vk works on it
+  # show mangohud with Right Shift + F12
+
+  # for games that "upscale" to fit automatically (they just stretch) like some visual novels do, use --scale to lower the game's detected screen resolution and then use fsr to upscale to lose less quality
+  # gs-run --fsr --sharpness 12 --scale 0.75 --16:9 %command%
+
   gs-wine-wait = pkgs.writeShellApplication {
     name = "gs-wine-wait";
     runtimeInputs = [ pkgs.coreutils ];
@@ -117,7 +126,7 @@ let
           gs-run -f %command%
           gs-run -f --fsr --scale 0.75 %command%
         Frame generation (lsfg-vk) + MangoHud:
-          gs-run --mangoapp env LSFGVK_PROFILE="performance" %command%
+          gs-run --mangoapp env LSFGVK_PROFILE="default" %command%
       EOF
       }
 
@@ -447,9 +456,42 @@ let
         };
         profile = [
           {
+            name = "default";
+            multiplier = 2;
+            flow_scale = 0.85;
+            performance_mode = false;
+            color_space = "srgb";
+            transfer_function = "srgb";
+            pacing_mode = "vsync";
+            override_present_mode = false;
+            preserve_swapchain_image_count = false;
+          }
+          {
+            name = "vsync";
+            multiplier = 2;
+            flow_scale = 0.85;
+            performance_mode = false;
+            color_space = "srgb";
+            transfer_function = "srgb";
+            pacing_mode = "vsync";
+            override_present_mode = true;
+            preserve_swapchain_image_count = false;
+          }
+          {
             name = "performance";
             multiplier = 2;
-            flow_scale = 1.0;
+            flow_scale = 0.75;
+            performance_mode = true;
+            color_space = "srgb";
+            transfer_function = "srgb";
+            pacing_mode = "vsync";
+            override_present_mode = false;
+            preserve_swapchain_image_count = false;
+          }
+          {
+            name = "performance-vsync";
+            multiplier = 2;
+            flow_scale = 0.75;
             performance_mode = true;
             color_space = "srgb";
             transfer_function = "srgb";
@@ -458,12 +500,23 @@ let
             preserve_swapchain_image_count = false;
           }
           {
-            name = "quality";
+            name = "hdr";
             multiplier = 2;
-            flow_scale = 1.0;
+            flow_scale = 0.85;
             performance_mode = false;
-            color_space = "srgb";
-            transfer_function = "srgb";
+            color_space = "hdr10";
+            transfer_function = "pq";
+            pacing_mode = "vsync";
+            override_present_mode = false;
+            preserve_swapchain_image_count = false;
+          }
+          {
+            name = "hdr-vsync";
+            multiplier = 2;
+            flow_scale = 0.85;
+            performance_mode = false;
+            color_space = "hdr10";
+            transfer_function = "pq";
             pacing_mode = "vsync";
             override_present_mode = true;
             preserve_swapchain_image_count = false;
@@ -843,7 +896,8 @@ in
   };
 
   home-manager.users.fumoctl = {
-    # Declarative `lsfg-vk` configuration (`performance` and `quality` profiles),
+    # Declarative `lsfg-vk` configuration (`default`, `vsync`, `performance`,
+    # `performance-vsync`, `hdr`, and `hdr-vsync` profiles),
     # validated at build time via `lsfg-vk-cli validate`.
     xdg.configFile."lsfg-vk/conf.toml" = {
       source = lsfgVkConf;
