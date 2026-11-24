@@ -11,45 +11,18 @@ let
   # Opens as a tiled/windowed Umbriel client by default (`Mod+F` toggles true
   # native fullscreen); pass `-f` / `--fullscreen` to start fullscreen immediately.
   #
-  # Recommended Steam launch options by genre:
-  #
-  # 1. Visual Novels (typically locked to 16:9 or 4:3, 720p/1080p art):
-  #    - Modern 16:9 VNs:  gs-run --16:9 %command%
-  #    - Classic 4:3 VNs:  gs-run --4:3 %command%
-  #    Tiles cleanly beside other windows on 32:9 (or pillarboxes on `Mod+F`),
-  #    and defaults to `-F linear` (no FSR) so line art isn't over-sharpened.
-  #
-  # 2. 2D Games:
-  #    - Pixel-art / retro:      gs-run --16:9 -F pixel %command%
-  #      (`pixel` / `nearest` keeps crisp pixel edges instead of bilinear blur)
-  #    - Hand-drawn / HD 2D:     gs-run --16:9 %command%   (or `gs-run %command%` if 32:9-native)
-  #
-  # 3. 3D Games:
-  #    - Aspect / input fix:     gs-run -f %command%   (or `gs-run --21:9 %command%` / `--16:9`)
-  #      Useful when a game breaks on 32:9, loses cursor lock (`--force-grab-cursor`),
-  #      or mishandles Wayland focus/alt-tab.
-  #    - Heavy 3D + upscaling:   gs-run -f --fsr --scale 0.75 %command%
-  #      Renders at 75% internal resolution and upscales to native via AMD FSR 1.0.
-  #
-  # 4. Frame Generation (`lsfg-vk`) + MangoHud:
-  #    - Native-aspect 3D games: LSFGVK_PROFILE="default" mangohud %command%
-  #      (Preferred whenever you don't need gamescope scaling/aspect clamping:
-  #      avoids nested XWM swapchain frame drops with lsfg-vk's vsync pacing.)
-  #    - Inside gs-run:          gs-run --mangoapp env LSFGVK_PROFILE="default" %command%
-  #      Keep `env LSFGVK_PROFILE=...` *after* `gs-run` so `lsfg-vk` only hooks the
-  #      game inside gamescope, not gamescope's own Vulkan compositor.
   # Runs a Wine command inside gamescope and waits on `wineserver -w` afterwards
   # so launcher executables (e.g. Bottles's `wine start /wait InitSetting.exe`)
   # that spawn the main game `.exe` and exit immediately do not cause
   # `gamescopereaper` to SIGTERM the spawned game. Also reaps any leftover
   # `ntsync` helper processes (`winedevice.exe`) attached to `gamescopereaper`
   # when the session ends.
-
+  #
   # THE FINALS/Deadlock/CS2/etc (keep game vsync on, mangohud fps limit = a bit below half screen refresh rate 200hz=96limit)
   # gs-run --vrr --force-grab-cursor -- env MANGOHUD_CONFIG="read_cfg,no_display,fps_limit=96,fps_limit_method=early" LSFGVK_PROFILE="default" mangohud %command%
   # add MESA_LOADER_DRIVER_OVERRIDE=zink inside gs-run if your game uses opengl to translate it to vulkan first so lsfg-vk works on it
   # show mangohud with Right Shift + F12
-
+  #
   # for games that "upscale" to fit automatically (they just stretch) like some visual novels do, use --scale to lower the game's detected screen resolution and then use fsr to upscale to lose less quality
   # gs-run --fsr --sharpness 12 --scale 0.75 --16:9 %command%
 
