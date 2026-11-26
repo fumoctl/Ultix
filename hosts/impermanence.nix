@@ -137,6 +137,8 @@
         ".local/share/Windscribe"
         ".local/share/nix"
         ".local/share/uv"
+        ".local/share/rstream"
+        ".local/share/rstream.bin"
         ".local/state/noctalia"
         ".local/state/portal-screen-mirror"
         ".local/state/wireplumber"
