@@ -450,7 +450,7 @@ in
           opacity = 1.0;
         }
         {
-          match.app_id = "^mpv$";
+          match.app_id = "^(mpv|rstream)$";
           blur = false;
           opacity = 1.0;
         }
